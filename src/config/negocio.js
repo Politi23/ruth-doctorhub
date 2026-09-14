@@ -58,6 +58,12 @@ export const NEGOCIO = {
     sello: '',
   },
 
+  // ── Dominio que se imprime en el QR de verificación ──
+  // El papel dura años: el QR debe apuntar SIEMPRE al mismo dominio, aunque
+  // se imprima desde otra URL. Vacío = usa el dominio actual.
+  // Poner el dominio final ANTES de que empiece a entregar récipes.
+  urlPublica: '',
+
   // ── Dónde atiende (aparece al pie de los documentos impresos) ──
   // PENDIENTE de confirmar la dirección con ella.
   consultorio: 'Puerto Cabello',

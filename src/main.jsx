@@ -5,8 +5,14 @@ import { AuthProvider, useAuth } from './context/AuthContext'
 import { ToastProvider } from './context/ToastContext'
 import App from './App'
 import Login from './pages/Login'
+import VerificarDocumento from './pages/VerificarDocumento'
 import LoadingScreen from './components/LoadingScreen'
 import './index.css'
+
+// La verificacion de documentos es publica: se atiende antes del login y sin
+// montar AppProvider, para que nadie tenga que iniciar sesion ni se carguen
+// los datos del consultorio en una pagina que puede ver cualquiera.
+const esVerificacion = window.location.pathname.startsWith('/verificar')
 
 function Root() {
   const { autenticado, cargando } = useAuth()
@@ -19,12 +25,16 @@ function Root() {
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
-    <AuthProvider>
-      <AppProvider>
-        <ToastProvider>
-          <Root />
-        </ToastProvider>
-      </AppProvider>
-    </AuthProvider>
+    {esVerificacion ? (
+      <VerificarDocumento />
+    ) : (
+      <AuthProvider>
+        <AppProvider>
+          <ToastProvider>
+            <Root />
+          </ToastProvider>
+        </AppProvider>
+      </AuthProvider>
+    )}
   </React.StrictMode>
 )

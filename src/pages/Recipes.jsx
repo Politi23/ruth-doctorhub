@@ -6,6 +6,7 @@ import { Save, Printer, Trash2, Plus, X, Pill } from 'lucide-react'
 import PageHeader from '../components/PageHeader'
 import { NEGOCIO, TERM } from '../config/negocio'
 import { hoyVE } from '../lib/fecha'
+import QRCode from 'qrcode'
 import { membrete, estilosHoja, pieHoja } from '../lib/membrete'
 
 
@@ -18,7 +19,10 @@ function formatFecha(iso) {
 }
 
 // ── Récipe en PDF, con el mismo formato que usa la doctora ──
-function imprimirRecipe(recipe, paciente) {
+async function imprimirRecipe(recipe, paciente) {
+  // La ventana se abre YA, antes de cualquier await, o el navegador la
+  // bloquea por no venir directo del clic.
+  const w = window.open('', '_blank')
   const med = NEGOCIO.medico
   const meds = Array.isArray(recipe.medicamentos) ? recipe.medicamentos : []
   const generales = (recipe.indicaciones_generales || '').split('\n').filter(l => l.trim())
@@ -39,7 +43,22 @@ function imprimirRecipe(recipe, paciente) {
   // Si no hay sello configurado, se imprime el nombre y queda el espacio para firmar a mano.
   const sello = med.sello ? `${window.location.origin}${med.sello}` : ''
 
-  const pie = pieHoja({ med, consultorio: NEGOCIO.consultorio })
+  // ── Sello antifalsificación: código único + QR a la página de verificación ──
+  // El QR debe apuntar al dominio definitivo, no al que se esté usando al
+  // imprimir, porque el papel sobrevive a cualquier cambio de URL de la app.
+  const base = (NEGOCIO.urlPublica || window.location.origin).replace(/\/+$/, '')
+  const urlVerificar = recipe.codigo ? `${base}/verificar/${recipe.codigo}` : ''
+  let qrSvg = ''
+  if (urlVerificar) {
+    try {
+      // margin 3 = zona de silencio del QR. Sin ella los lectores fallan.
+      qrSvg = await QRCode.toString(urlVerificar, {
+        type: 'svg', margin: 3, errorCorrectionLevel: 'M',
+      })
+    } catch { qrSvg = '' }
+  }
+
+  const pie = pieHoja({ med, consultorio: NEGOCIO.consultorio, qrSvg, codigo: recipe.codigo, base })
 
   // Una sola hoja horizontal partida en dos mitades:
   // izquierda RP. (para la farmacia) y derecha Ind. (para el paciente).
@@ -101,7 +120,6 @@ function imprimirRecipe(recipe, paciente) {
   </div>
   <script>window.onload=()=>window.print()<\/script></body></html>`
 
-  const w = window.open('', '_blank')
   w.document.write(html)
   w.document.close()
 }
@@ -289,6 +307,11 @@ export default function Recipes() {
               <div className="flex items-center justify-between">
                 <div>
                   <span className="text-white font-semibold text-sm">{formatFecha(r.fecha)}</span>
+                  {r.codigo && (
+                    <p className="text-white/30 text-[11px] font-mono tracking-wider mt-0.5">
+                      Cód. {r.codigo}
+                    </p>
+                  )}
                 </div>
                 <div className="flex items-center gap-3">
                   <button onClick={() => imprimirRecipe(r, paciente)}
