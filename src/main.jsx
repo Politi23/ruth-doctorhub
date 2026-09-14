@@ -7,6 +7,8 @@ import App from './App'
 import Login from './pages/Login'
 import VerificarDocumento from './pages/VerificarDocumento'
 import LoadingScreen from './components/LoadingScreen'
+import FaltaConfig from './components/FaltaConfig'
+import { supabaseListo } from './lib/supabase'
 import './index.css'
 
 // La verificacion de documentos es publica: se atiende antes del login y sin
@@ -15,6 +17,7 @@ import './index.css'
 const esVerificacion = window.location.pathname.startsWith('/verificar')
 
 function Root() {
+  if (!supabaseListo) return <FaltaConfig />
   const { autenticado, cargando } = useAuth()
   const { loading, error } = useApp()
   if (cargando) return <LoadingScreen />

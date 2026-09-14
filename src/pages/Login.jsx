@@ -38,10 +38,8 @@ export default function Login() {
 
         {/* Logo */}
         <div className="text-center space-y-2">
-          <div className="w-20 h-20 rounded-3xl bg-white/15 flex items-center justify-center mx-auto"
-               style={{border:'1px solid rgba(255,255,255,0.25)', boxShadow:'inset 0 1px 0 rgba(255,255,255,0.40)'}}>
-            <span className="text-white text-4xl font-bold">{NEGOCIO.nombreApp.charAt(0)}</span>
-          </div>
+          <img src="/logo-login.png" alt={NEGOCIO.nombreApp}
+               className="w-28 h-28 mx-auto object-contain" />
           <h1 className="text-white text-2xl font-bold">{NEGOCIO.nombreApp}</h1>
           <p className="text-white/40 text-sm">Inicia sesión para continuar</p>
         </div>

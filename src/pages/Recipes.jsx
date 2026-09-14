@@ -128,9 +128,13 @@ export default function Recipes() {
   const { id } = useParams()
   const navigate = useNavigate()
   const toast = useToast()
-  const { pacientes, recipes, agregarRecipe, eliminarRecipe } = useApp()
+  const { pacientes, historiales, recipes, agregarRecipe, eliminarRecipe } = useApp()
 
   const paciente = pacientes.find(p => p.id === id)
+  // La fecha de nacimiento se carga en el historial médico, no en la ficha:
+  // el récipe la toma de ahí, y solo avisa si no está en ninguno de los dos.
+  const historial = (historiales || []).find(h => h.paciente_id === id)
+  const nacimiento = paciente?.fecha_nacimiento || historial?.fecha_nacimiento || null
   const mios = recipes.filter(r => r.paciente_id === id).sort((a, b) => b.fecha.localeCompare(a.fecha))
 
   const [creando, setCreando] = useState(false)
@@ -186,7 +190,7 @@ export default function Recipes() {
         paciente_id: id,
         paciente_nombre: `${paciente.nombre} ${paciente.apellido}`,
         paciente_cedula: paciente.cedula || null,
-        paciente_nacimiento: paciente.fecha_nacimiento || null,
+        paciente_nacimiento: nacimiento,
         fecha: form.fecha,
         medicamentos: meds,
         indicaciones_generales: form.indicaciones_generales.trim(),
@@ -223,11 +227,11 @@ export default function Recipes() {
           <h2 className="text-white text-lg font-bold">{paciente.nombre} {paciente.apellido}</h2>
           <p className="text-white/50 text-sm">
             {paciente.cedula || 'Sin cédula'}
-            {paciente.fecha_nacimiento && ` · Nac. ${formatFecha(paciente.fecha_nacimiento)}`}
+            {nacimiento && ` · Nac. ${formatFecha(nacimiento)}`}
           </p>
-          {!paciente.fecha_nacimiento && (
-            <button onClick={() => navigate(`/pacientes/${id}/editar`)} className="text-amber-300/80 text-xs underline">
-              Falta la fecha de nacimiento para el récipe
+          {!nacimiento && (
+            <button onClick={() => navigate(`/pacientes/${id}/historial`)} className="text-amber-300/80 text-xs underline">
+              Falta la fecha de nacimiento: cárgala en el historial médico
             </button>
           )}
         </div>

@@ -29,10 +29,8 @@ export default function LoadingScreen({ error }) {
         </div>
       ) : (
         <>
-          <div className="w-16 h-16 rounded-3xl bg-white/15 flex items-center justify-center"
-               style={{border:'1px solid rgba(255,255,255,0.25)', boxShadow:'inset 0 1px 0 rgba(255,255,255,0.4)'}}>
-            <span className="text-white text-2xl font-bold">{NEGOCIO.nombreApp.charAt(0)}</span>
-          </div>
+          <img src="/logo-login.png" alt={NEGOCIO.nombreApp}
+               className="w-20 h-20 object-contain" />
           <div className="space-y-1 text-center">
             <p className="text-white font-bold text-lg">{NEGOCIO.nombreApp}</p>
             <p className="text-white/40 text-sm">Cargando datos…</p>
