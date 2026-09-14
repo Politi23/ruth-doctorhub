@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useApp } from '../context/AppContext'
-import { Edit2, Trash2, DollarSign, Plus, Phone, Calendar, Clock, Copy, Check, MessageCircle, CalendarPlus, Stethoscope, FileText, ChevronRight } from 'lucide-react'
+import { Edit2, Trash2, DollarSign, Plus, Phone, Calendar, Clock, Copy, Check, MessageCircle, CalendarPlus, Stethoscope, FileText, Pill, ChevronRight } from 'lucide-react'
 import PageHeader from '../components/PageHeader'
 import { hoyVE } from '../lib/fecha'
 import { NEGOCIO, TERM } from '../config/negocio'
@@ -221,6 +221,23 @@ export default function DetallePaciente() {
             <div className="flex-1 min-w-0">
               <p className="text-white font-semibold text-sm">Informes médicos</p>
               <p className="text-white/45 text-xs">Redactar e imprimir informes con membrete</p>
+            </div>
+            <ChevronRight size={17} className="text-white/25 flex-shrink-0" />
+          </button>
+        )}
+
+        {/* Récipes médicos */}
+        {NEGOCIO.modulos?.recipes && modulosListos.recipes && (
+          <button onClick={() => navigate(`/pacientes/${id}/recipes`)}
+                  className="glass-card w-full flex items-center gap-3 text-left active:bg-white/10 transition-colors"
+                  style={{background:'rgba(192,132,252,0.12)', border:'1px solid rgba(192,132,252,0.30)'}}>
+            <div className="w-11 h-11 rounded-2xl flex items-center justify-center flex-shrink-0"
+                 style={{background:'rgba(192,132,252,0.20)', border:'1px solid rgba(192,132,252,0.35)'}}>
+              <Pill size={19} className="text-purple-300" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-white font-semibold text-sm">Récipes</p>
+              <p className="text-white/45 text-xs">Emitir e imprimir récipes médicos</p>
             </div>
             <ChevronRight size={17} className="text-white/25 flex-shrink-0" />
           </button>

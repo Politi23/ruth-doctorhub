@@ -18,8 +18,9 @@ export function AppProvider({ children }) {
   const [historiales, setHistoriales] = useState([])
   const [medidas,     setMedidas]     = useState([])
   const [informes,    setInformes]    = useState([])
+  const [recipes,     setRecipes]     = useState([])
   // Módulos opcionales cuya tabla todavía no está creada en la base.
-  const [modulosListos, setModulosListos] = useState({ historial: true, informes: true })
+  const [modulosListos, setModulosListos] = useState({ historial: true, informes: true, recipes: true })
   const [loading,   setLoading]   = useState(true)
   const [error,     setError]     = useState(null)
 
@@ -36,7 +37,7 @@ export function AppProvider({ children }) {
       }
       try {
         const [resPacientes, resIngresos, resCitas, resEgresos,
-               resHistoriales, resMedidas, resInformes] = await Promise.all([
+               resHistoriales, resMedidas, resInformes, resRecipes] = await Promise.all([
           supabase.from('pacientes').select('*').order('created_at', { ascending: false }).limit(5000),
           supabase.from('ingresos').select('*').order('created_at',  { ascending: false }).limit(5000),
           supabase.from('citas').select('*').order('created_at',     { ascending: false }).limit(5000),
@@ -44,6 +45,7 @@ export function AppProvider({ children }) {
           supabase.from('historiales').select('*').order('created_at', { ascending: false }).limit(5000),
           supabase.from('medidas').select('*').order('fecha',          { ascending: false }).limit(20000),
           supabase.from('informes').select('*').order('created_at',    { ascending: false }).limit(5000),
+          supabase.from('recipes').select('*').order('created_at',     { ascending: false }).limit(5000),
         ])
 
         if (cancelled) return
@@ -56,13 +58,15 @@ export function AppProvider({ children }) {
         // El historial y los informes son módulos opcionales: si su tabla no
         // existe, se cargan vacíos y su entrada queda oculta. Cualquier otro
         // error sí se reporta, para no esconder fallas reales.
-        for (const r of [resHistoriales, resMedidas, resInformes])
+        for (const r of [resHistoriales, resMedidas, resInformes, resRecipes])
           if (r.error && !faltaLaTabla(r.error)) throw r.error
 
         const sinHistorial = faltaLaTabla(resHistoriales.error) || faltaLaTabla(resMedidas.error)
         const sinInformes  = faltaLaTabla(resInformes.error)
+        const sinRecipes   = faltaLaTabla(resRecipes.error)
         if (sinHistorial) console.warn('[DoctorHub] Faltan las tablas del historial médico: el módulo queda oculto hasta correr su SQL.')
         if (sinInformes)  console.warn('[DoctorHub] Falta la tabla "informes": el módulo queda oculto hasta correr su SQL.')
+        if (sinRecipes)   console.warn('[DoctorHub] Falta la tabla "recipes": el módulo de récipes queda oculto hasta correr su SQL.')
 
         setPacientes(resPacientes.data || [])
         setIngresos(resIngresos.data   || [])
@@ -71,7 +75,8 @@ export function AppProvider({ children }) {
         setHistoriales(resHistoriales.data || [])
         setMedidas(resMedidas.data         || [])
         setInformes(resInformes.data       || [])
-        setModulosListos({ historial: !sinHistorial, informes: !sinInformes })
+        setRecipes(resRecipes.data         || [])
+        setModulosListos({ historial: !sinHistorial, informes: !sinInformes, recipes: !sinRecipes })
       } catch (err) {
         if (!cancelled) {
           console.error('[Supabase] Error al cargar datos:', err.message)
@@ -140,6 +145,7 @@ export function AppProvider({ children }) {
     setHistoriales(prev => prev.filter(h => h.paciente_id !== id))
     setMedidas(prev     => prev.filter(m => m.paciente_id !== id))
     setInformes(prev    => prev.filter(r => r.paciente_id !== id))
+    setRecipes(prev     => prev.filter(r => r.paciente_id !== id))
   }
 
   // ── Ingresos ───────────────────────────────────────────────
@@ -297,10 +303,27 @@ export function AppProvider({ children }) {
     setInformes(prev => prev.filter(r => r.id !== id))
   }
 
+  const agregarRecipe = async (datos) => {
+    const { data, error } = await supabase
+      .from('recipes')
+      .insert(datos)
+      .select()
+      .single()
+    if (error) throw error
+    setRecipes(prev => [data, ...prev])
+    return data
+  }
+
+  const eliminarRecipe = async (id) => {
+    const { error } = await supabase.from('recipes').delete().eq('id', id)
+    if (error) throw error
+    setRecipes(prev => prev.filter(r => r.id !== id))
+  }
+
   return (
     <AppContext.Provider value={{
       pacientes, ingresos, citas, egresos,
-      historiales, medidas, informes, modulosListos,
+      historiales, medidas, informes, recipes, modulosListos,
       loading, error,
       agregarPaciente, actualizarPaciente, eliminarPaciente,
       agregarIngreso, actualizarIngreso, eliminarIngreso,
@@ -308,6 +331,7 @@ export function AppProvider({ children }) {
       agregarEgreso, actualizarEgreso, eliminarEgreso,
       guardarHistorial, agregarMedida, eliminarMedida,
       agregarInforme, eliminarInforme,
+      agregarRecipe, eliminarRecipe,
     }}>
       {children}
     </AppContext.Provider>

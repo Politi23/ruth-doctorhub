@@ -66,7 +66,6 @@ async function imprimirInforme(informe, paciente, historial, opciones = {}) {
   // La ventana se abre YA, antes de cualquier await, o el navegador la bloquea.
   const w = window.open('', '_blank')
   const med = NEGOCIO.medico
-  const sede = NEGOCIO.sedes.find(s => s.nombre === informe.sede) || NEGOCIO.sedes[0]
 
   const ficha = enBlanco ? [] : fichaPatronimica(paciente, historial)
 
@@ -119,7 +118,7 @@ async function imprimirInforme(informe, paciente, historial, opciones = {}) {
       ${cabecera}
       ${cuerpo}
     </div>
-    ${pieHoja({ med, sede, conSello: !enBlanco })}
+    ${pieHoja({ med, consultorio: NEGOCIO.consultorio, conSello: !enBlanco })}
   </div>
   <script>window.onload=()=>window.print()<\/script></body></html>`
 
@@ -161,7 +160,6 @@ export default function InformeMedico() {
   const abrirNuevo = () => {
     setForm({
       fecha: hoyVE(),
-      sede: NEGOCIO.sedes[0]?.nombre || '',
       examen_fisico: historial?.examen_fisico || '',
       diagnostico: '',
       tratamiento: historial?.tratamiento || '',
@@ -174,7 +172,7 @@ export default function InformeMedico() {
 
   const guardar = async () => {
     if (!form.diagnostico.trim()) {
-      toast.error('Escribe al menos el diagnóstico')
+      toast('Escribe al menos el diagnóstico', 'error')
       return
     }
     setGuardando(true)
@@ -182,17 +180,16 @@ export default function InformeMedico() {
       await agregarInforme({
         paciente_id: paciente.id,
         fecha: form.fecha,
-        sede: form.sede,
         examen_fisico: form.examen_fisico || null,
         diagnostico: form.diagnostico || null,
         tratamiento: form.tratamiento || null,
         plan_trabajo: form.plan_trabajo || null,
       })
-      toast.exito('Informe guardado')
+      toast('Informe guardado', 'success')
       setCreando(false)
       setForm(null)
     } catch {
-      toast.error('No se pudo guardar el informe')
+      toast('No se pudo guardar el informe', 'error')
     }
     setGuardando(false)
   }
@@ -234,7 +231,7 @@ export default function InformeMedico() {
             <button onClick={abrirNuevo} className="glass-btn-primary flex items-center justify-center gap-2">
               <FileText size={15} /> Nuevo informe
             </button>
-            <button onClick={() => imprimirInforme({ sede: NEGOCIO.sedes[0]?.nombre }, paciente, historial, { enBlanco: true })}
+            <button onClick={() => imprimirInforme({}, paciente, historial, { enBlanco: true })}
                     className="glass-card flex items-center justify-center gap-2 text-white/70 text-sm font-semibold py-3">
               <Printer size={15} /> Hoja en blanco
             </button>
@@ -251,18 +248,10 @@ export default function InformeMedico() {
               </button>
             </div>
 
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="glass-label">Fecha</label>
-                <input type="date" className="glass-input" value={form.fecha}
-                       onChange={e => set('fecha', e.target.value)} />
-              </div>
-              <div>
-                <label className="glass-label">Sede</label>
-                <select className="glass-input" value={form.sede} onChange={e => set('sede', e.target.value)}>
-                  {NEGOCIO.sedes.map(s => <option key={s.nombre} value={s.nombre}>{s.nombre}</option>)}
-                </select>
-              </div>
+            <div>
+              <label className="glass-label">Fecha</label>
+              <input type="date" className="glass-input" value={form.fecha}
+                     onChange={e => set('fecha', e.target.value)} />
             </div>
 
             {campos.map(({ c, l, ph, filas }) => (
@@ -294,7 +283,6 @@ export default function InformeMedico() {
             <div className="flex items-center justify-between">
               <div className="min-w-0">
                 <span className="text-white font-semibold text-sm">{formatFecha(r.fecha)}</span>
-                {r.sede && <span className="text-white/35 text-xs"> · {r.sede}</span>}
               </div>
               <div className="flex items-center gap-3 flex-shrink-0">
                 <button onClick={() => imprimirInforme(r, paciente, historial)}

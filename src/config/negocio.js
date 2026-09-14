@@ -41,6 +41,7 @@ export const NEGOCIO = {
   modulos: {
     historial: true,        // historial médico del paciente
     informes: true,         // informe médico imprimible con membrete
+    recipes: true,          // récipes digitales con indicaciones, exportables en PDF
     curvaCrecimiento: true, // curva de distancia para uso clínico · talla
   },
 
@@ -57,11 +58,9 @@ export const NEGOCIO = {
     sello: '',
   },
 
-  // ── Sedes donde atiende (aparecen al pie del informe) ──
-  // PENDIENTE de confirmar con ella.
-  sedes: [
-    { nombre: 'Consultorio', direccion: 'Puerto Cabello' },
-  ],
+  // ── Dónde atiende (aparece al pie de los documentos impresos) ──
+  // PENDIENTE de confirmar la dirección con ella.
+  consultorio: 'Puerto Cabello',
 }
 
 // ── Terminología: cómo se llama a las personas atendidas ──

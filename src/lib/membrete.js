@@ -36,7 +36,7 @@ export function membrete(med, logo = LOGO_MEMBRETE) {
 
 // Pie: sello escaneado a la izquierda, código validador y QR a la derecha.
 // Sin sello configurado deja el espacio para firmar a mano.
-export function pieHoja({ med, sede, qrSvg = '', codigo = '', base = '', conSello = true }) {
+export function pieHoja({ med, consultorio = '', qrSvg = '', codigo = '', base = '', conSello = true }) {
   const sello = conSello && med.sello ? `${window.location.origin}${med.sello}` : ''
   const dominio = String(base).replace(/^https?:\/\//, '')
 
@@ -58,7 +58,7 @@ export function pieHoja({ med, sede, qrSvg = '', codigo = '', base = '', conSell
         ${validador}
       </div>
       <div class="regla"></div>
-      <p class="sede">${sede ? `${sede.nombre}${sede.direccion ? ', ' + sede.direccion : ''}` : ''}</p>
+      <p class="sede">${consultorio || ''}</p>
     </div>`
 }
 

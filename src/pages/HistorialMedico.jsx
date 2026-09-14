@@ -88,16 +88,16 @@ export default function HistorialMedico() {
         examenes_laboratorio: form.examenes_laboratorio || null,
         tratamiento: form.tratamiento || null,
       })
-      toast.exito('Historial guardado')
+      toast('Historial guardado', 'success')
     } catch {
-      toast.error('No se pudo guardar el historial')
+      toast('No se pudo guardar el historial', 'error')
     }
     setGuardando(false)
   }
 
   const agregarToma = async () => {
     if (!nueva.peso && !nueva.talla) {
-      toast.error('Escribe al menos el peso o la talla')
+      toast('Escribe al menos el peso o la talla', 'error')
       return
     }
     try {
@@ -108,9 +108,9 @@ export default function HistorialMedico() {
         talla: nueva.talla ? Number(nueva.talla) : null,
       })
       setNueva({ fecha: hoyVE(), peso: '', talla: '' })
-      toast.exito('Toma registrada')
+      toast('Toma registrada', 'success')
     } catch {
-      toast.error('No se pudo registrar la toma')
+      toast('No se pudo registrar la toma', 'error')
     }
   }
 
