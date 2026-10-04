@@ -7,7 +7,7 @@ import PageHeader from '../components/PageHeader'
 import CurvaCrecimiento from '../components/CurvaCrecimiento'
 import { NEGOCIO } from '../config/negocio'
 import { hoyVE } from '../lib/fecha'
-import { edadTexto, calcularEdad, potencialGenetico, clasificarTalla } from '../lib/clinico'
+import { edadTexto, potencialGenetico } from '../lib/clinico'
 
 const VACIO = {
   fecha_nacimiento: '', sexo: '',
@@ -60,14 +60,6 @@ export default function HistorialMedico() {
 
   // Potencial genético (talla diana): promedio de la talla de los padres ± 6,5 cm
   const pg = potencialGenetico(form.talla_padre, form.talla_madre, form.sexo)
-
-  const ultima = misMedidas[0]
-  const edadUltima = ultima && form.fecha_nacimiento
-    ? calcularEdad(form.fecha_nacimiento, ultima.fecha)?.decimal
-    : null
-  const clasif = ultima && edadUltima != null && form.sexo
-    ? clasificarTalla(ultima.talla, edadUltima, form.sexo)
-    : null
 
   const guardar = async () => {
     setGuardando(true)
@@ -202,7 +194,7 @@ export default function HistorialMedico() {
                  style={{ background: 'rgba(139,92,246,0.12)', border: '1px solid rgba(139,92,246,0.28)' }}>
               <p className="text-white/40 text-xs">Talla diana</p>
               <p className="text-violet-200 text-2xl font-bold">{pg.valor} cm</p>
-              <p className="text-white/45 text-xs mt-0.5">Rango esperado: {pg.min} – {pg.max} cm</p>
+              <p className="text-white/45 text-xs mt-0.5">Rango esperado: {pg.min} – {pg.max} cm (± {pg.margen} cm)</p>
             </div>
           ) : (
             <p className="text-white/30 text-xs">Se calcula con la talla de ambos padres y el sexo del paciente.</p>
@@ -234,16 +226,6 @@ export default function HistorialMedico() {
                   className="glass-btn-primary w-full flex items-center justify-center gap-2">
             <Plus size={16} /> Registrar toma
           </button>
-
-          {clasif && (
-            <div className="rounded-2xl px-3 py-2.5"
-                 style={{ background: 'rgba(255,255,255,0.05)', border: `1px solid ${clasif.color}40` }}>
-              <p className="text-white/45 text-xs">Última talla frente a la referencia</p>
-              <p className="text-sm font-bold mt-0.5" style={{ color: clasif.color }}>
-                Talla para la edad: {clasif.texto}
-              </p>
-            </div>
-          )}
 
           {misMedidas.length === 0 ? (
             <p className="text-white/30 text-xs text-center py-3">Sin tomas registradas.</p>

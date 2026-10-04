@@ -1,122 +1,130 @@
-import { referencia, calcularEdad } from '../lib/clinico'
+import { useState } from 'react'
+import { X, Maximize2 } from 'lucide-react'
+import { calcularEdad } from '../lib/clinico'
 
-// ── Curva de distancia para uso clínico · Talla ──
-// La doctora la pidió específica, no una gráfica genérica de crecimiento:
-// talla alcanzada frente a los percentiles P3, P50 y P97 de referencia,
-// separadas por sexo. No incluye peso ni velocidad de crecimiento.
+// ── Curva de Distancia para uso clínico · Talla ──
+// Se usa la lámina oficial de la SVPP (percentiles de Fundacredesa) como
+// fondo y encima se marcan las tomas del paciente. No reconstruimos los
+// percentiles: son los impresos en la propia lámina, los mismos que la
+// doctora usa en papel.
+//
+// Calibración de la lámina, medida sobre la imagen recortada (585 x 564 px)
+// y verificada contra los números impresos de los dos ejes:
+const IMG_W = 585, IMG_H = 564
+const X_EDAD_0 = 45.0        // píxel del año 0
+const PX_POR_ANIO = 24.575
+const Y_TALLA_200 = 38.5     // píxel de los 200 cm
+const PX_POR_CM = 2.7588
+const EDAD_MAX = 20, TALLA_MIN = 30, TALLA_MAX = 200
+
+const ejeX = (edad) => X_EDAD_0 + edad * PX_POR_ANIO
+const ejeY = (cm) => Y_TALLA_200 + (TALLA_MAX - cm) * PX_POR_CM
+
 export default function CurvaCrecimiento({ sexo, fechaNacimiento, medidas }) {
+  const [ampliada, setAmpliada] = useState(false)
   if (!sexo || !fechaNacimiento) return null
 
-  const W = 320, H = 260, ML = 34, MR = 8, MT = 10, MB = 26
-  const gw = W - ML - MR, gh = H - MT - MB
+  const lamina = sexo === 'M' ? '/curva-talla-varones.png' : '/curva-talla-hembras.png'
 
-  const tabla = referencia(sexo)
-  const datos = (medidas || [])
+  const puntos = (medidas || [])
     .filter(m => m.talla)
     .map(m => {
       const e = calcularEdad(fechaNacimiento, m.fecha)
-      return e ? { edad: e.decimal, valor: Number(m.talla) } : null
+      if (!e) return null
+      const talla = Number(m.talla)
+      // Fuera de la lámina no se dibuja nada: es preferible no mostrar el
+      // punto a mostrarlo en un lugar que no le corresponde.
+      if (e.decimal < 0 || e.decimal > EDAD_MAX) return null
+      if (talla < TALLA_MIN || talla > TALLA_MAX) return null
+      return { x: ejeX(e.decimal), y: ejeY(talla), edad: e.decimal, talla }
     })
     .filter(Boolean)
     .sort((a, b) => a.edad - b.edad)
 
-  const hayDatos = datos.length > 0
+  const trazo = puntos.map((p, i) => `${i ? 'L' : 'M'}${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' ')
 
-  // Rango de edad visible, ajustado a las tomas del paciente
-  const edadMax = Math.min(18, Math.max(3, Math.ceil((datos.at(-1)?.edad ?? 5) + 1)))
-  const edadMin = Math.max(0, Math.floor((datos[0]?.edad ?? 0) - 1))
-
-  const vis = tabla.filter(([e]) => e >= edadMin && e <= edadMax)
-  const valMin = Math.floor((Math.min(...vis.map(v => v[1])) - 5) / 10) * 10
-  const valMax = Math.ceil((Math.max(...vis.map(v => v[3])) + 5) / 10) * 10
-  const refSeries = [
-    vis.map(([e, a]) => [e, a]),        // P3
-    vis.map(([e, , b]) => [e, b]),      // P50
-    vis.map(([e, , , c]) => [e, c]),    // P97
-  ]
-
-  const x = (edad) => ML + ((edad - edadMin) / (edadMax - edadMin)) * gw
-  const y = (v) => MT + gh - ((v - valMin) / (valMax - valMin)) * gh
-  const path = (serie) => serie.map(([e, v], i) => `${i ? 'L' : 'M'}${x(e).toFixed(1)},${y(v).toFixed(1)}`).join(' ')
-
-  // Banda entre P3 y P97: el rango considerado normal
-  const areaNormal = refSeries[0]?.length
-    ? `${path(refSeries[0])} ${[...refSeries[2]].reverse().map(([e, v]) => `L${x(e).toFixed(1)},${y(v).toFixed(1)}`).join(' ')} Z`
-    : null
-
-  const ticksEdad = []
-  const paso = edadMax - edadMin > 10 ? 3 : (edadMax - edadMin > 5 ? 2 : 1)
-  for (let e = edadMin; e <= edadMax; e += paso) ticksEdad.push(e)
-
-  const ticksVal = []
-  for (let v = valMin; v <= valMax; v += 10) ticksVal.push(v)
+  const Grafica = ({ ancho }) => (
+    <div style={{ position: 'relative', width: ancho, lineHeight: 0 }}>
+      <img src={lamina} alt="Curva de distancia para uso clínico, talla"
+           style={{ width: '100%', display: 'block', borderRadius: 10 }} />
+      <svg viewBox={`0 0 ${IMG_W} ${IMG_H}`}
+           style={{ position: 'absolute', inset: 0, width: '100%', height: '100%' }}>
+        {puntos.length > 1 && (
+          <>
+            <path d={trazo} fill="none" stroke="#ffffff" strokeWidth="4.5"
+                  strokeLinejoin="round" strokeLinecap="round" opacity="0.9" />
+            <path d={trazo} fill="none" stroke="#7c3aed" strokeWidth="2.2"
+                  strokeLinejoin="round" strokeLinecap="round" />
+          </>
+        )}
+        {puntos.map((p, i) => (
+          <g key={i}>
+            <circle cx={p.x} cy={p.y} r="4.6" fill="#ffffff" opacity="0.95" />
+            <circle cx={p.x} cy={p.y} r="3" fill="#7c3aed" />
+          </g>
+        ))}
+      </svg>
+    </div>
+  )
 
   return (
-    <div className="glass-card space-y-2">
-      <div>
-        <p className="text-white font-semibold text-sm">Curva de distancia para uso clínico</p>
-        <p className="text-white/40 text-xs mt-0.5">
-          Talla · {sexo === 'M' ? 'Varones' : 'Hembras'}
+    <>
+      <div className="glass-card space-y-2">
+        <div className="flex items-start justify-between gap-2">
+          <div>
+            <p className="text-white font-semibold text-sm">Curva de distancia para uso clínico</p>
+            <p className="text-white/40 text-xs mt-0.5">
+              Talla · {sexo === 'M' ? 'Varones' : 'Hembras'}
+            </p>
+          </div>
+          <button onClick={() => setAmpliada(true)}
+                  className="glass-btn-icon w-9 h-9 flex items-center justify-center flex-shrink-0"
+                  aria-label="Ver la curva en grande">
+            <Maximize2 size={15} className="text-white/70" />
+          </button>
+        </div>
+
+        {puntos.length === 0 ? (
+          <p className="text-white/35 text-sm text-center py-8">
+            Sin tomas de talla dentro del rango de la curva.
+          </p>
+        ) : (
+          <>
+            <Grafica ancho="100%" />
+            <div className="flex items-center gap-2 pt-1">
+              <span className="inline-block" style={{ width: 14, height: 3, borderRadius: 2, background: '#7c3aed' }} />
+              <span className="text-white/45 text-xs">Tomas del paciente</span>
+              <span className="text-white/25 text-xs ml-auto">{puntos.length} {puntos.length === 1 ? 'toma' : 'tomas'}</span>
+            </div>
+          </>
+        )}
+
+        <p className="text-white/25 text-[11px] leading-relaxed">
+          Percentiles de Fundacredesa, lámina de la Sociedad Venezolana de Puericultura y Pediatría.
+          I Estudio Nacional de Crecimiento y Desarrollo Humanos 1981-1987 y Estudio Longitudinal
+          del Área Metropolitana de Caracas 1976-1982.
         </p>
       </div>
 
-      {!hayDatos ? (
-        <p className="text-white/35 text-sm text-center py-8">
-          Sin tomas de talla registradas.
-        </p>
-      ) : (
-        <>
-          <svg viewBox={`0 0 ${W} ${H}`} className="w-full" style={{ overflow: 'visible' }}>
-            {areaNormal && <path d={areaNormal} fill="rgba(139,92,246,0.10)" />}
-
-            {ticksVal.map(t => (
-              <g key={t}>
-                <line x1={ML} y1={y(t)} x2={W - MR} y2={y(t)} stroke="rgba(255,255,255,0.07)" strokeWidth="1" />
-                <text x={ML - 5} y={y(t) + 3} textAnchor="end" fontSize="8" fill="rgba(255,255,255,0.40)">{t}</text>
-              </g>
-            ))}
-            {ticksEdad.map(e => (
-              <g key={e}>
-                <line x1={x(e)} y1={MT} x2={x(e)} y2={MT + gh} stroke="rgba(255,255,255,0.07)" strokeWidth="1" />
-                <text x={x(e)} y={H - MB + 13} textAnchor="middle" fontSize="8" fill="rgba(255,255,255,0.40)">{e}</text>
-              </g>
-            ))}
-
-            {/* Percentiles de referencia */}
-            <path d={path(refSeries[0])} fill="none" stroke="rgba(255,255,255,0.30)" strokeWidth="1" strokeDasharray="3 3" />
-            <path d={path(refSeries[1])} fill="none" stroke="rgba(167,139,250,0.85)" strokeWidth="1.5" />
-            <path d={path(refSeries[2])} fill="none" stroke="rgba(255,255,255,0.30)" strokeWidth="1" strokeDasharray="3 3" />
-
-            {/* Tomas del paciente */}
-            {datos.length > 1 && (
-              <path d={datos.map((p, i) => `${i ? 'L' : 'M'}${x(p.edad).toFixed(1)},${y(p.valor).toFixed(1)}`).join(' ')}
-                    fill="none" stroke="#34d399" strokeWidth="2" strokeLinejoin="round" />
-            )}
-            {datos.map((p, i) => (
-              <circle key={i} cx={x(p.edad)} cy={y(p.valor)} r="3.2" fill="#34d399" stroke="rgba(0,0,0,0.35)" strokeWidth="0.8" />
-            ))}
-
-            <text x={ML - 26} y={MT + gh / 2} fontSize="8" fill="rgba(255,255,255,0.35)"
-                  transform={`rotate(-90 ${ML - 26} ${MT + gh / 2})`} textAnchor="middle">
-              Talla (cm)
-            </text>
-            <text x={ML + gw / 2} y={H - 2} fontSize="8" fill="rgba(255,255,255,0.35)" textAnchor="middle">Edad (años)</text>
-          </svg>
-
-          <div className="flex flex-wrap items-center gap-3 pt-1">
-            <span className="flex items-center gap-1.5 text-white/45 text-xs">
-              <span style={{ width: 12, height: 2, background: '#34d399', borderRadius: 2 }} />Paciente
-            </span>
-            <span className="flex items-center gap-1.5 text-white/45 text-xs">
-              <span style={{ width: 12, height: 2, background: 'rgba(167,139,250,0.9)', borderRadius: 2 }} />P50
-            </span>
-            <span className="flex items-center gap-1.5 text-white/45 text-xs">
-              <span style={{ width: 12, height: 2, background: 'rgba(255,255,255,0.45)', borderRadius: 2 }} />P3 / P97
-            </span>
-            <span className="text-white/25 text-xs ml-auto">cm</span>
+      {/* Vista ampliada: la lámina es densa y en pantalla de teléfono se lee mal */}
+      {ampliada && (
+        <div className="fixed inset-0 z-50 flex flex-col"
+             style={{ background: 'rgba(8,4,20,0.96)' }}>
+          <div className="flex items-center justify-between px-4 py-3 flex-shrink-0">
+            <p className="text-white text-sm font-semibold">
+              Curva de distancia · Talla · {sexo === 'M' ? 'Varones' : 'Hembras'}
+            </p>
+            <button onClick={() => setAmpliada(false)}
+                    className="glass-btn-icon w-10 h-10 flex items-center justify-center"
+                    aria-label="Cerrar">
+              <X size={18} className="text-white" />
+            </button>
           </div>
-        </>
+          <div className="flex-1 overflow-auto px-3 pb-6">
+            <Grafica ancho="min(1100px, 240vw)" />
+          </div>
+        </div>
       )}
-    </div>
+    </>
   )
 }

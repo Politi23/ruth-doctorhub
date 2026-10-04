@@ -1,91 +1,59 @@
 // ═══════════════════════════════════════════════════════════════
 //  MÓDULO MÉDICO — utilidades clínicas
-//  Cálculo de edad, potencial genético (talla diana) y tablas de
-//  referencia talla/edad para la curva de distancia.
+//
+//  Las referencias son las que usa la Dra. Ruth: FUNDACREDESA, tal
+//  como aparecen en la Guía de Manejo Clínico de la Sociedad
+//  Venezolana de Puericultura y Pediatría (SVPP).
+//    · I Estudio Nacional de Crecimiento y Desarrollo Humanos,
+//      1981-1987, Fundacredesa, Caracas 2006
+//    · Estudio Longitudinal del Área Metropolitana de Caracas,
+//      1976-1982, Fundacredesa / CESMa, Universidad Simón Bolívar
+//
+//  La curva de distancia de talla NO se dibuja a partir de tablas:
+//  se usa la lámina oficial de la SVPP como fondo y encima se marcan
+//  las tomas del paciente. Así no hay valores de referencia
+//  reconstruidos por nosotros. Ver components/CurvaCrecimiento.jsx
 // ═══════════════════════════════════════════════════════════════
 
 // ── Edad a partir de la fecha de nacimiento ──
 export function calcularEdad(fechaNac, hasta = null) {
   if (!fechaNac) return null
-  const [ay, am, ad] = fechaNac.split('-').map(Number)
-  const ref = hasta ? hasta.split('-').map(Number) : (() => {
-    const h = new Date()
-    return [h.getFullYear(), h.getMonth() + 1, h.getDate()]
-  })()
-  const [by, bm, bd] = ref
-  let anios = by - ay
-  let meses = bm - am
-  if (bd < ad) meses--
-  if (meses < 0) { anios--; meses += 12 }
-  return { anios, meses, decimal: anios + meses / 12 }
+  const nac = new Date(fechaNac + 'T00:00:00')
+  const ref = hasta ? new Date(hasta + 'T00:00:00') : new Date()
+  if (isNaN(nac) || isNaN(ref) || ref < nac) return null
+  let años = ref.getFullYear() - nac.getFullYear()
+  let meses = ref.getMonth() - nac.getMonth()
+  let dias = ref.getDate() - nac.getDate()
+  if (dias < 0) { meses -= 1; dias += new Date(ref.getFullYear(), ref.getMonth(), 0).getDate() }
+  if (meses < 0) { años -= 1; meses += 12 }
+  const decimal = (ref - nac) / (365.25 * 24 * 3600 * 1000)
+  return { años, meses, dias, decimal }
 }
 
 export function edadTexto(fechaNac, hasta = null) {
   const e = calcularEdad(fechaNac, hasta)
   if (!e) return ''
-  if (e.anios < 1) return `${e.meses} ${e.meses === 1 ? 'mes' : 'meses'}`
-  if (e.anios < 5 && e.meses > 0) return `${e.anios} ${e.anios === 1 ? 'año' : 'años'} y ${e.meses} ${e.meses === 1 ? 'mes' : 'meses'}`
-  return `${e.anios} ${e.anios === 1 ? 'año' : 'años'}`
+  if (e.años === 0) return `${e.meses} ${e.meses === 1 ? 'mes' : 'meses'}`
+  if (e.meses === 0) return `${e.años} ${e.años === 1 ? 'año' : 'años'}`
+  return `${e.años} ${e.años === 1 ? 'año' : 'años'} y ${e.meses} ${e.meses === 1 ? 'mes' : 'meses'}`
 }
 
 // ── Potencial genético (talla diana) ──
-// Fórmula estándar: promedio de la talla de ambos padres ± 6,5 cm según el sexo.
+// Fórmulas de la Guía de Manejo Clínico de la SVPP, página "Potencial
+// genético en talla de los padres":
+//   varones = [TP + (TM + 12,7 cm)] / 2  ± 10 cm
+//   hembras = [TM + (TP − 12,7 cm)] / 2  ±  9 cm
+// El rango no es el mismo en ambos sexos: ±10 en varones y ±9 en hembras.
 export function potencialGenetico(tallaPadre, tallaMadre, sexo) {
-  const p = Number(tallaPadre), m = Number(tallaMadre)
-  if (!p || !m || !sexo) return null
-  const base = (p + m) / 2
-  const valor = sexo === 'M' ? base + 6.5 : base - 6.5
-  return { valor: +valor.toFixed(1), min: +(valor - 8.5).toFixed(1), max: +(valor + 8.5).toFixed(1) }
-}
-
-// ── Tablas de referencia talla/edad (percentiles 3, 50 y 97) ──
-// Valores referenciales OMS en cm, de 0 a 18 años.
-//
-// PENDIENTE DE REEMPLAZO — NO USAR CON PACIENTES REALES.
-// La Dra. Ruth confirmó que ella trabaja con las tablas de FUNDACREDESA
-// (Estudio Nacional de Crecimiento y Desarrollo Humanos 1981-1987 y Estudio
-// Longitudinal del Área Metropolitana de Caracas 1976-1982), que son las de
-// la "Curva de Distancia para uso clínico: TALLA" de la SVPP, con siete
-// percentiles (3, 10, 25, 50, 75, 90 y 97), no tres. Estos valores OMS son
-// provisionales y dan resultados distintos a los suyos.
-const REF_M = [ // varones: [edad, P3, P50, P97]
-  [0,46.3,49.9,53.4],[1,71.0,75.7,80.5],[2,81.7,87.8,93.9],[3,89.6,96.1,102.7],
-  [4,96.0,103.3,110.6],[5,102.0,110.0,118.0],[6,107.7,116.0,124.4],[7,113.0,121.7,130.5],
-  [8,118.1,127.3,136.5],[9,122.9,132.6,142.3],[10,127.7,137.8,147.9],[11,132.6,143.1,153.6],
-  [12,137.6,149.1,160.5],[13,143.0,156.0,168.9],[14,148.8,163.2,176.7],[15,154.6,169.0,181.7],
-  [16,159.0,172.9,184.9],[17,161.6,175.2,186.7],[18,162.9,176.5,187.7],
-]
-const REF_F = [ // hembras: [edad, P3, P50, P97]
-  [0,45.6,49.1,52.7],[1,68.9,74.0,79.2],[2,80.0,85.7,92.9],[3,87.4,95.1,102.7],
-  [4,94.1,102.7,111.3],[5,99.9,109.4,118.9],[6,105.6,115.1,124.6],[7,111.2,121.7,132.2],
-  [8,116.6,127.3,138.0],[9,121.7,132.6,143.5],[10,127.0,138.6,150.2],[11,133.0,145.0,157.0],
-  [12,139.0,151.2,163.4],[13,143.9,156.4,168.9],[14,147.0,159.8,172.6],[15,148.8,161.7,174.6],
-  [16,149.6,162.5,175.4],[17,150.0,162.9,175.8],[18,150.1,163.1,176.1],
-]
-
-export const referencia = (sexo) => (sexo === 'M' ? REF_M : REF_F)
-
-// Interpola los percentiles para una edad decimal dada
-export function percentilesEnEdad(edadDecimal, sexo) {
-  const tabla = referencia(sexo)
-  const e = Math.max(0, Math.min(18, edadDecimal))
-  const i = Math.min(Math.floor(e), 17)
-  const [e1, a1, b1, c1] = tabla[i]
-  const [e2, a2, b2, c2] = tabla[i + 1] || tabla[i]
-  const t = e2 === e1 ? 0 : (e - e1) / (e2 - e1)
-  const lerp = (x, y) => x + (y - x) * t
-  return { p3: lerp(a1, a2), p50: lerp(b1, b2), p97: lerp(c1, c2) }
-}
-
-// Clasifica una talla contra la referencia
-export function clasificarTalla(talla, edadDecimal, sexo) {
-  if (!talla || edadDecimal == null || !sexo) return null
-  const { p3, p50, p97 } = percentilesEnEdad(edadDecimal, sexo)
-  const t = Number(talla)
-  if (t < p3)  return { texto: 'Por debajo del P3',  color: '#fca5a5', nivel: 'bajo' }
-  if (t > p97) return { texto: 'Por encima del P97', color: '#fcd34d', nivel: 'alto' }
-  const pos = t < p50
-    ? 3 + ((t - p3) / (p50 - p3)) * 47
-    : 50 + ((t - p50) / (p97 - p50)) * 47
-  return { texto: `Percentil ~${Math.round(pos)}`, color: '#6ee7b7', nivel: 'normal' }
+  const tp = Number(tallaPadre), tm = Number(tallaMadre)
+  if (!tp || !tm || !sexo) return null
+  const esVaron = sexo === 'M'
+  const valor = esVaron ? (tp + (tm + 12.7)) / 2 : (tm + (tp - 12.7)) / 2
+  const margen = esVaron ? 10 : 9
+  return {
+    valor: +valor.toFixed(1),
+    min: +(valor - margen).toFixed(1),
+    max: +(valor + margen).toFixed(1),
+    margen,
+  }
 }
