@@ -40,8 +40,14 @@ export function potencialGenetico(tallaPadre, tallaMadre, sexo) {
 
 // ── Tablas de referencia talla/edad (percentiles 3, 50 y 97) ──
 // Valores referenciales OMS en cm, de 0 a 18 años.
-// IMPORTANTE: estas tablas y la fórmula del potencial genético las debe
-// revisar y validar la Dra. Ruth antes de usarlas con pacientes reales.
+//
+// PENDIENTE DE REEMPLAZO — NO USAR CON PACIENTES REALES.
+// La Dra. Ruth confirmó que ella trabaja con las tablas de FUNDACREDESA
+// (Estudio Nacional de Crecimiento y Desarrollo Humanos 1981-1987 y Estudio
+// Longitudinal del Área Metropolitana de Caracas 1976-1982), que son las de
+// la "Curva de Distancia para uso clínico: TALLA" de la SVPP, con siete
+// percentiles (3, 10, 25, 50, 75, 90 y 97), no tres. Estos valores OMS son
+// provisionales y dan resultados distintos a los suyos.
 const REF_M = [ // varones: [edad, P3, P50, P97]
   [0,46.3,49.9,53.4],[1,71.0,75.7,80.5],[2,81.7,87.8,93.9],[3,89.6,96.1,102.7],
   [4,96.0,103.3,110.6],[5,102.0,110.0,118.0],[6,107.7,116.0,124.4],[7,113.0,121.7,130.5],
