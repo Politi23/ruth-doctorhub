@@ -63,7 +63,7 @@ export const NEGOCIO = {
   // El papel dura años: el QR debe apuntar SIEMPRE al mismo dominio, aunque
   // se imprima desde otra URL. Vacío = usa el dominio actual.
   // Poner el dominio final ANTES de que empiece a entregar récipes.
-  urlPublica: '',
+  urlPublica: 'https://ruth-doctorhub.vercel.app',
 
   // ── Dónde atiende (aparece al pie de los documentos impresos) ──
   // PENDIENTE de confirmar la dirección con ella.
