@@ -53,6 +53,7 @@ export const INFORMES = [
   {
     id: 'i1', paciente_id: 'p1', fecha: diasAtras(20), codigo: 'c4d7e91a',
     examen_fisico: 'Peso: 32.4 Kg. Talla: 131 cm. IMC: 18.9. Tanner I.',
+    examenes_laboratorio: ['TSH 2.1 uUI/mL (normal)', 'T4 libre 1.1 ng/dL (normal)', 'IGF-1 pendiente'].join(L),
     diagnostico: ['Talla baja familiar', 'Retraso constitucional del crecimiento'].join(L),
     tratamiento: 'Vitamina D3 1000 UI diarias.',
     plan_trabajo: ['Edad ósea.', 'IGF-1 e IGFBP-3.', 'Control en 4 meses con nueva talla.'].join(L),

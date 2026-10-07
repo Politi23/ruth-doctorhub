@@ -54,10 +54,11 @@ function fichaPatronimica(paciente, historial) {
 }
 
 const BLOQUES = [
-  { campo: 'examen_fisico', titulo: 'EXAMEN FÍSICO:' },
-  { campo: 'diagnostico',   titulo: 'DIAGNÓSTICO:', listado: true },
-  { campo: 'tratamiento',   titulo: 'TRATAMIENTO:' },
-  { campo: 'plan_trabajo',  titulo: 'PLAN DE TRABAJO:' },
+  { campo: 'examen_fisico',        titulo: 'EXAMEN FÍSICO:' },
+  { campo: 'examenes_laboratorio', titulo: 'EXÁMENES DE LABORATORIO:' },
+  { campo: 'diagnostico',          titulo: 'DIAGNÓSTICO:', listado: true },
+  { campo: 'tratamiento',          titulo: 'TRATAMIENTO:' },
+  { campo: 'plan_trabajo',         titulo: 'PLAN DE TRABAJO:' },
 ]
 
 // ── Informe en PDF, hoja A4 vertical con el membrete ──
@@ -161,6 +162,7 @@ export default function InformeMedico() {
     setForm({
       fecha: hoyVE(),
       examen_fisico: historial?.examen_fisico || '',
+      examenes_laboratorio: historial?.examenes_laboratorio || '',
       diagnostico: '',
       tratamiento: historial?.tratamiento || '',
       plan_trabajo: '',
@@ -181,6 +183,7 @@ export default function InformeMedico() {
         paciente_id: paciente.id,
         fecha: form.fecha,
         examen_fisico: form.examen_fisico || null,
+        examenes_laboratorio: form.examenes_laboratorio || null,
         diagnostico: form.diagnostico || null,
         tratamiento: form.tratamiento || null,
         plan_trabajo: form.plan_trabajo || null,
@@ -195,10 +198,11 @@ export default function InformeMedico() {
   }
 
   const campos = [
-    { c: 'examen_fisico', l: 'Examen físico',   ph: 'Hallazgos al examen',  filas: 4 },
-    { c: 'diagnostico',   l: 'Diagnóstico',     ph: 'Uno por línea',        filas: 4 },
-    { c: 'tratamiento',   l: 'Tratamiento',     ph: 'Tratamiento indicado', filas: 4 },
-    { c: 'plan_trabajo',  l: 'Plan de trabajo', ph: 'Conducta y controles', filas: 3 },
+    { c: 'examen_fisico',        l: 'Examen físico',          ph: 'Hallazgos al examen',       filas: 4 },
+    { c: 'examenes_laboratorio', l: 'Exámenes de laboratorio', ph: 'Resultados de laboratorio', filas: 4 },
+    { c: 'diagnostico',          l: 'Diagnóstico',             ph: 'Uno por línea',             filas: 4 },
+    { c: 'tratamiento',          l: 'Tratamiento',             ph: 'Tratamiento indicado',      filas: 4 },
+    { c: 'plan_trabajo',         l: 'Plan de trabajo',         ph: 'Conducta y controles',      filas: 3 },
   ]
 
   const ficha = fichaPatronimica(paciente, historial)

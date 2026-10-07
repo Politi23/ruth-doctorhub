@@ -52,7 +52,8 @@ export default function VerificarDocumento() {
   // Se publica el informe completo: es lo que permite comparar contra el
   // papel y detectar una alteración. Solo la cédula va enmascarada.
   const secciones = [
-    { titulo: 'Examen físico',   texto: d.examen_fisico },
+    { titulo: 'Examen físico',          texto: d.examen_fisico },
+    { titulo: 'Exámenes de laboratorio', texto: d.examenes_laboratorio },
     { titulo: 'Diagnóstico',     texto: d.diagnostico, listado: true },
     { titulo: 'Tratamiento',     texto: d.tratamiento },
     { titulo: 'Plan de trabajo', texto: d.plan_trabajo },
