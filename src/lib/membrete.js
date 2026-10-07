@@ -12,9 +12,9 @@ const miles = (n) => String(n).replace(/\B(?=(\d{3})+(?!\d))/g, '.')
 
 export function credenciales(med) {
   return [
-    med.cedula ? `CI: V-${miles(med.cedula)}` : '',
-    med.mpps ? `MPPS: ${miles(med.mpps)}` : '',
-    med.cm ? `CM: ${med.cm}` : '',
+    med.cedula ? `C.I. V-${miles(med.cedula)}` : '',
+    med.mpps ? `MPPS ${miles(med.mpps)}` : '',
+    med.cm ? `C.M. ${miles(med.cm)}` : '',
   ].filter(Boolean).join(' &nbsp; ')
 }
 
@@ -52,7 +52,7 @@ export function pieHoja({ med, consultorio = '', qrSvg = '', codigo = '', base =
       <div class="pie-fila">
         <div class="pie-firma">
           ${sello
-            ? `<img class="sello" src="${sello}" alt="">`
+            ? `${med.espacioFirma ? '<div class="espacio-firma"></div>' : ''}<img class="sello" src="${sello}" alt="">`
             : `<div class="espacio-firma"></div><p class="firma">${med.nombre}</p>`}
         </div>
         ${validador}
@@ -80,7 +80,7 @@ export const estilosHoja = `
     .validador .qr svg { width: 100%; height: 100%; display: block; shape-rendering: crispEdges; }
     .val-cod { margin: 1mm 0 0; font-size: 6pt; color: #111; white-space: nowrap; }
     .val-url { margin: 0.5mm 0 0; font-size: 5pt; color: #666; line-height: 1.25; word-break: break-word; }
-    .sello { display: block; width: 34mm; height: auto; margin: 0 0 2px; }
+    .sello { display: block; width: 52mm; height: auto; margin: 0 0 2px; }
     .espacio-firma { height: 16mm; }
     .firma { margin: 0 0 2px; font-size: 8.5pt; font-weight: bold; color: #5b21b6; }
     .sede { margin: 3px 0 0; font-size: 7.5pt; color: #444; }`

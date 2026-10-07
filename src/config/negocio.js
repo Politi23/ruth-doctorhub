@@ -10,7 +10,7 @@ export const NEGOCIO = {
 
   // ── Dueña del negocio ──
   nombreCorto: 'Dra. Ruth',                 // saludo del dashboard
-  nombreCompleto: 'Dra. Ruth',              // FALTA su nombre completo (reportes y WhatsApp)
+  nombreCompleto: 'Dra. Ruth Salas',        // reportes PDF y mensajes de WhatsApp
   saludo: 'Bienvenida',
   descripcionProfesional: 'endocrinóloga pediatra',
 
@@ -24,12 +24,11 @@ export const NEGOCIO = {
   colorTema: '#7C3AED',
   colorFondo: '#F5F3FF',
 
-  // ── Catálogos: servicios de la Dra. Ruth ──
-  // PENDIENTE de confirmar con ella.
-  motivosCita: ['Primera consulta', 'Control', 'Evaluación de crecimiento', 'Revisión de exámenes', 'Interconsulta'],
-  motivosRapidos: ['Primera consulta', 'Control', 'Evaluación de crecimiento', 'Revisión de exámenes'],
-  motivoDefault: 'Control',
-  conceptosIngreso: ['Primera consulta', 'Control', 'Evaluación de crecimiento', 'Revisión de exámenes', 'Interconsulta'],
+  // ── Catálogos: motivos de consulta de la Dra. Ruth ──
+  motivosCita: ['Inadecuado crecimiento', 'Talla baja', 'Talla alta', 'Hallazgo de laboratorio', 'Control de peso', 'Sobrepeso', 'Aumento de mamas', 'Presencia de vello púbico', 'Evaluación del crecimiento y desarrollo'],
+  motivosRapidos: ['Inadecuado crecimiento', 'Talla baja', 'Control de peso', 'Evaluación del crecimiento y desarrollo'],
+  motivoDefault: 'Evaluación del crecimiento y desarrollo',
+  conceptosIngreso: ['Inadecuado crecimiento', 'Talla baja', 'Talla alta', 'Hallazgo de laboratorio', 'Control de peso', 'Sobrepeso', 'Aumento de mamas', 'Presencia de vello púbico', 'Evaluación del crecimiento y desarrollo'],
   // La primera categoría es la seleccionada por defecto al registrar un egreso
   categoriasEgreso: ['Alquiler consultorio','Electricidad / Agua / Internet','Suministros médicos','Equipos médicos','Personal / Honorarios','Publicidad','Impuestos','Mantenimiento','Transporte','Otro'],
 
@@ -45,17 +44,19 @@ export const NEGOCIO = {
     curvaCrecimiento: true, // curva de distancia para uso clínico · talla
   },
 
-  // ── Datos que encabezan el informe médico ──
-  // FALTAN: confirmar con ella antes de imprimir nada para pacientes reales.
+  // ── Datos que encabezan los documentos impresos ──
+  // Tomados de su sello.
   medico: {
-    nombre: 'Dra. Ruth',
-    especialidad: 'Endocrinología Pediátrica',
-    cedula: '',
-    mpps: '',
-    cm: '',
+    nombre: 'Dra. Ruth Salas',
+    especialidad: 'Endocrinólogo Pediatra',   // como aparece en su sello
+    cedula: '11809510',
+    mpps: '55312',
+    cm: '6774',
     correo: '',
-    // Firma y sello escaneados. Vacío = deja el espacio para firmar a mano.
-    sello: '',
+    sello: '/sello.png',
+    // Su sello es solo texto, sin firma manuscrita: se deja espacio arriba
+    // para que ella firme sobre el papel.
+    espacioFirma: true,
   },
 
   // ── Dominio que se imprime en el QR de verificación ──
