@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
+import { createPortal } from 'react-dom'
 import { X, Maximize2 } from 'lucide-react'
 import { calcularEdad, edadTexto } from '../lib/clinico'
 
@@ -86,10 +87,10 @@ export default function CurvaCrecimiento({ sexo, fechaNacimiento, medidas }) {
   const trazo = puntos.map((p, i) => `${i ? 'L' : 'M'}${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' ')
   const elegido = sel != null ? puntos[sel] : null
 
-  const Grafica = () => (
-    <div style={{ position: 'relative', width: '100%', lineHeight: 0 }}>
+  const Grafica = ({ estilo }) => (
+    <div style={{ position: 'relative', width: '100%', lineHeight: 0, ...estilo }}>
       <img src={lamina} alt="Curva de distancia para uso clínico, talla"
-           style={{ width: '100%', display: 'block', borderRadius: 8 }} />
+           style={{ width: '100%', height: '100%', display: 'block', borderRadius: 8 }} />
       <svg viewBox={`0 0 ${IMG_W} ${IMG_H}`}
            style={{ position: 'absolute', inset: 0, width: '100%', height: '100%' }}
            onClick={() => setSel(null)}>
@@ -190,18 +191,26 @@ export default function CurvaCrecimiento({ sexo, fechaNacimiento, medidas }) {
         </p>
       </div>
 
-      {/* Vista ampliada: entra completa, y al acercar se centra en las tomas */}
-      {ampliada && (
+      {/* Vista ampliada: va por portal al body para que el fixed se mida
+          contra la ventana y no contra la columna de la página. */}
+      {ampliada && createPortal(
         <div className="fixed inset-0 z-50 flex flex-col" style={{ background: 'rgba(8,4,20,0.97)' }}>
-          <div className="flex items-center justify-between gap-3 px-4 py-3 flex-shrink-0">
-            <p className="text-white text-sm font-semibold min-w-0 truncate">
-              Talla · {sexo === 'M' ? 'Varones' : 'Hembras'}
-            </p>
-            <div className="flex items-center gap-2 flex-shrink-0">
+          <div className="flex-shrink-0 px-4 pt-3 pb-2 space-y-2">
+            <div className="flex items-center justify-between gap-3">
+              <p className="text-white text-sm font-semibold min-w-0 truncate">
+                Curva de distancia · Talla · {sexo === 'M' ? 'Varones' : 'Hembras'}
+              </p>
+              <button onClick={() => setAmpliada(false)}
+                      className="glass-btn-icon w-10 h-10 flex items-center justify-center flex-shrink-0"
+                      aria-label="Cerrar">
+                <X size={18} className="text-white" />
+              </button>
+            </div>
+            <div className="flex justify-center">
               <div className="flex rounded-xl overflow-hidden" style={{ border: '1px solid rgba(255,255,255,0.18)' }}>
                 {ZOOMS.map(z => (
                   <button key={z} onClick={() => setZoom(z)}
-                          className="px-3 py-1.5 text-xs font-semibold transition-colors"
+                          className="px-5 py-1.5 text-xs font-semibold transition-colors"
                           style={{
                             background: zoom === z ? 'rgba(124,58,237,0.55)' : 'transparent',
                             color: zoom === z ? '#fff' : 'rgba(255,255,255,0.45)',
@@ -210,27 +219,34 @@ export default function CurvaCrecimiento({ sexo, fechaNacimiento, medidas }) {
                   </button>
                 ))}
               </div>
-              <button onClick={() => setAmpliada(false)}
-                      className="glass-btn-icon w-10 h-10 flex items-center justify-center"
-                      aria-label="Cerrar">
-                <X size={18} className="text-white" />
-              </button>
             </div>
           </div>
 
           {/* A 1x la lámina entra completa y va centrada; de ahí en adelante
               se desplaza y el efecto la deja sobre las tomas del paciente. */}
           <div ref={marco} className="flex-1 overflow-auto px-3"
-               style={zoom === 1 ? { display: 'flex', alignItems: 'center' } : undefined}>
-            <div style={{ width: `${zoom * 100}%`, flexShrink: 0 }}>
-              <Grafica />
-            </div>
+               style={zoom === 1
+                 ? { display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: 0 }
+                 : { minHeight: 0 }}>
+            {zoom === 1 ? (
+              // Entra completa: se limita por alto y por ancho, conservando
+              // la proporción de la lámina.
+              <Grafica estilo={{
+                aspectRatio: `${IMG_W} / ${IMG_H}`,
+                maxWidth: '100%', maxHeight: '100%', margin: '0 auto',
+              }} />
+            ) : (
+              <div style={{ width: `${zoom * 100}%`, flexShrink: 0 }}>
+                <Grafica />
+              </div>
+            )}
           </div>
 
           <div className="px-4 py-3 flex-shrink-0">
             <Lectura />
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </>
   )

@@ -254,9 +254,13 @@ input, select, textarea, button {
   animation: pageIn 0.25s ease forwards;
 }
 
+/* El fotograma final deja transform en none a proposito: un transform
+   aplicado convierte al elemento en bloque contenedor y los position:fixed
+   de adentro (modales, pantalla completa) se posicionan respecto a el en
+   vez de la ventana. */
 @keyframes pageIn {
   from { opacity: 0; transform: translateY(12px); }
-  to   { opacity: 1; transform: translateY(0); }
+  to   { opacity: 1; transform: none; }
 }
 
 /* ── Toast ──────────────────────────────────────────────────────────────────── */
