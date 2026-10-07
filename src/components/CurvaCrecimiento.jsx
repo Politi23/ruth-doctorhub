@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useRef, useEffect, useCallback } from 'react'
 import { X, Maximize2 } from 'lucide-react'
 import { calcularEdad } from '../lib/clinico'
 
@@ -20,9 +20,12 @@ const EDAD_MAX = 20, TALLA_MIN = 30, TALLA_MAX = 200
 const ejeX = (edad) => X_EDAD_0 + edad * PX_POR_ANIO
 const ejeY = (cm) => Y_TALLA_200 + (TALLA_MAX - cm) * PX_POR_CM
 
+const ZOOMS = [1, 2, 3]
+
 export default function CurvaCrecimiento({ sexo, fechaNacimiento, medidas }) {
   const [ampliada, setAmpliada] = useState(false)
-  if (!sexo || !fechaNacimiento) return null
+  const [zoom, setZoom] = useState(1)
+  const marco = useRef(null)
 
   const lamina = sexo === 'M' ? '/curva-talla-varones.png' : '/curva-talla-hembras.png'
 
@@ -41,12 +44,34 @@ export default function CurvaCrecimiento({ sexo, fechaNacimiento, medidas }) {
     .filter(Boolean)
     .sort((a, b) => a.edad - b.edad)
 
+  // Al acercar, la lámina no cabe en pantalla. Se centra en las tomas del
+  // paciente, que es lo que interesa ver, y no en el extremo izquierdo vacío.
+  const centrarEnLasTomas = useCallback(() => {
+    const el = marco.current
+    if (!el || puntos.length === 0) return
+    const fx = puntos.reduce((a, p) => a + p.x, 0) / puntos.length / IMG_W
+    const fy = puntos.reduce((a, p) => a + p.y, 0) / puntos.length / IMG_H
+    el.scrollLeft = fx * el.scrollWidth - el.clientWidth / 2
+    el.scrollTop = fy * el.scrollHeight - el.clientHeight / 2
+  }, [puntos])
+
+  useEffect(() => {
+    if (!ampliada) return
+    // Si la lámina aún no terminó de medirse, el primer intento se queda
+    // corto: se repite una vez más.
+    requestAnimationFrame(centrarEnLasTomas)
+    const t = setTimeout(centrarEnLasTomas, 160)
+    return () => clearTimeout(t)
+  }, [ampliada, zoom, centrarEnLasTomas])
+
+  if (!sexo || !fechaNacimiento) return null
+
   const trazo = puntos.map((p, i) => `${i ? 'L' : 'M'}${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' ')
 
-  const Grafica = ({ ancho }) => (
-    <div style={{ position: 'relative', width: ancho, lineHeight: 0 }}>
+  const Grafica = () => (
+    <div style={{ position: 'relative', width: '100%', lineHeight: 0 }}>
       <img src={lamina} alt="Curva de distancia para uso clínico, talla"
-           style={{ width: '100%', display: 'block', borderRadius: 10 }} />
+           style={{ width: '100%', display: 'block', borderRadius: 8 }} />
       <svg viewBox={`0 0 ${IMG_W} ${IMG_H}`}
            style={{ position: 'absolute', inset: 0, width: '100%', height: '100%' }}>
         {puntos.length > 1 && (
@@ -77,7 +102,7 @@ export default function CurvaCrecimiento({ sexo, fechaNacimiento, medidas }) {
               Talla · {sexo === 'M' ? 'Varones' : 'Hembras'}
             </p>
           </div>
-          <button onClick={() => setAmpliada(true)}
+          <button onClick={() => { setZoom(1); setAmpliada(true) }}
                   className="glass-btn-icon w-9 h-9 flex items-center justify-center flex-shrink-0"
                   aria-label="Ver la curva en grande">
             <Maximize2 size={15} className="text-white/70" />
@@ -90,11 +115,16 @@ export default function CurvaCrecimiento({ sexo, fechaNacimiento, medidas }) {
           </p>
         ) : (
           <>
-            <Grafica ancho="100%" />
+            <button onClick={() => { setZoom(1); setAmpliada(true) }}
+                    className="block w-full" aria-label="Ampliar la curva">
+              <Grafica />
+            </button>
             <div className="flex items-center gap-2 pt-1">
               <span className="inline-block" style={{ width: 14, height: 3, borderRadius: 2, background: '#7c3aed' }} />
               <span className="text-white/45 text-xs">Tomas del paciente</span>
-              <span className="text-white/25 text-xs ml-auto">{puntos.length} {puntos.length === 1 ? 'toma' : 'tomas'}</span>
+              <span className="text-white/25 text-xs ml-auto">
+                {puntos.length} {puntos.length === 1 ? 'toma' : 'tomas'} · toca para ampliar
+              </span>
             </div>
           </>
         )}
@@ -106,23 +136,48 @@ export default function CurvaCrecimiento({ sexo, fechaNacimiento, medidas }) {
         </p>
       </div>
 
-      {/* Vista ampliada: la lámina es densa y en pantalla de teléfono se lee mal */}
+      {/* Vista ampliada: entra completa, y al acercar se centra en las tomas */}
       {ampliada && (
-        <div className="fixed inset-0 z-50 flex flex-col"
-             style={{ background: 'rgba(8,4,20,0.96)' }}>
-          <div className="flex items-center justify-between px-4 py-3 flex-shrink-0">
-            <p className="text-white text-sm font-semibold">
-              Curva de distancia · Talla · {sexo === 'M' ? 'Varones' : 'Hembras'}
+        <div className="fixed inset-0 z-50 flex flex-col" style={{ background: 'rgba(8,4,20,0.97)' }}>
+          <div className="flex items-center justify-between gap-3 px-4 py-3 flex-shrink-0">
+            <p className="text-white text-sm font-semibold min-w-0 truncate">
+              Talla · {sexo === 'M' ? 'Varones' : 'Hembras'}
             </p>
-            <button onClick={() => setAmpliada(false)}
-                    className="glass-btn-icon w-10 h-10 flex items-center justify-center"
-                    aria-label="Cerrar">
-              <X size={18} className="text-white" />
-            </button>
+            <div className="flex items-center gap-2 flex-shrink-0">
+              <div className="flex rounded-xl overflow-hidden" style={{ border: '1px solid rgba(255,255,255,0.18)' }}>
+                {ZOOMS.map(z => (
+                  <button key={z} onClick={() => setZoom(z)}
+                          className="px-3 py-1.5 text-xs font-semibold transition-colors"
+                          style={{
+                            background: zoom === z ? 'rgba(124,58,237,0.55)' : 'transparent',
+                            color: zoom === z ? '#fff' : 'rgba(255,255,255,0.45)',
+                          }}>
+                    {z}×
+                  </button>
+                ))}
+              </div>
+              <button onClick={() => setAmpliada(false)}
+                      className="glass-btn-icon w-10 h-10 flex items-center justify-center"
+                      aria-label="Cerrar">
+                <X size={18} className="text-white" />
+              </button>
+            </div>
           </div>
-          <div className="flex-1 overflow-auto px-3 pb-6">
-            <Grafica ancho="min(1100px, 240vw)" />
+
+          {/* A 1x la lámina entra completa y va centrada; de ahí en adelante
+              se desplaza y el efecto la deja sobre las tomas del paciente. */}
+          <div ref={marco} className="flex-1 overflow-auto px-3 pb-4"
+               style={zoom === 1 ? { display: 'flex', alignItems: 'center' } : undefined}>
+            <div style={{ width: `${zoom * 100}%`, flexShrink: 0 }}>
+              <Grafica />
+            </div>
           </div>
+
+          {zoom > 1 && (
+            <p className="text-white/30 text-[11px] text-center pb-3 flex-shrink-0">
+              Arrastra para moverte por la lámina
+            </p>
+          )}
         </div>
       )}
     </>
