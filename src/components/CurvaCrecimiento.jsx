@@ -1,12 +1,15 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { X, Maximize2 } from 'lucide-react'
-import { calcularEdad } from '../lib/clinico'
+import { calcularEdad, edadTexto } from '../lib/clinico'
 
 // ── Curva de Distancia para uso clínico · Talla ──
 // Se usa la lámina oficial de la SVPP (percentiles de Fundacredesa) como
 // fondo y encima se marcan las tomas del paciente. No reconstruimos los
 // percentiles: son los impresos en la propia lámina, los mismos que la
 // doctora usa en papel.
+//
+// Al tocar una toma se dibujan guías hacia los dos ejes, para poder leer
+// el percentil sobre la lámina sin estimar la posición a ojo.
 //
 // Calibración de la lámina, medida sobre la imagen recortada (585 x 564 px)
 // y verificada contra los números impresos de los dos ejes:
@@ -17,14 +20,25 @@ const Y_TALLA_200 = 38.5     // píxel de los 200 cm
 const PX_POR_CM = 2.7588
 const EDAD_MAX = 20, TALLA_MIN = 30, TALLA_MAX = 200
 
+// Bordes del área graficada, para que las guías lleguen justo a los ejes
+const X_EJE = X_EDAD_0
+const Y_EJE = Y_TALLA_200 + (TALLA_MAX - TALLA_MIN) * PX_POR_CM
+
 const ejeX = (edad) => X_EDAD_0 + edad * PX_POR_ANIO
 const ejeY = (cm) => Y_TALLA_200 + (TALLA_MAX - cm) * PX_POR_CM
 
 const ZOOMS = [1, 2, 3]
 
+function formatFecha(iso) {
+  if (!iso) return ''
+  const [y, m, d] = String(iso).split('-')
+  return `${d}/${m}/${y}`
+}
+
 export default function CurvaCrecimiento({ sexo, fechaNacimiento, medidas }) {
   const [ampliada, setAmpliada] = useState(false)
   const [zoom, setZoom] = useState(1)
+  const [sel, setSel] = useState(null)
   const marco = useRef(null)
 
   const lamina = sexo === 'M' ? '/curva-talla-varones.png' : '/curva-talla-hembras.png'
@@ -39,7 +53,10 @@ export default function CurvaCrecimiento({ sexo, fechaNacimiento, medidas }) {
       // punto a mostrarlo en un lugar que no le corresponde.
       if (e.decimal < 0 || e.decimal > EDAD_MAX) return null
       if (talla < TALLA_MIN || talla > TALLA_MAX) return null
-      return { x: ejeX(e.decimal), y: ejeY(talla), edad: e.decimal, talla }
+      return {
+        x: ejeX(e.decimal), y: ejeY(talla),
+        edad: e.decimal, talla, fecha: m.fecha, peso: m.peso,
+      }
     })
     .filter(Boolean)
     .sort((a, b) => a.edad - b.edad)
@@ -67,13 +84,26 @@ export default function CurvaCrecimiento({ sexo, fechaNacimiento, medidas }) {
   if (!sexo || !fechaNacimiento) return null
 
   const trazo = puntos.map((p, i) => `${i ? 'L' : 'M'}${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' ')
+  const elegido = sel != null ? puntos[sel] : null
 
   const Grafica = () => (
     <div style={{ position: 'relative', width: '100%', lineHeight: 0 }}>
       <img src={lamina} alt="Curva de distancia para uso clínico, talla"
            style={{ width: '100%', display: 'block', borderRadius: 8 }} />
       <svg viewBox={`0 0 ${IMG_W} ${IMG_H}`}
-           style={{ position: 'absolute', inset: 0, width: '100%', height: '100%' }}>
+           style={{ position: 'absolute', inset: 0, width: '100%', height: '100%' }}
+           onClick={() => setSel(null)}>
+
+        {/* Guías de la toma elegida hacia los dos ejes */}
+        {elegido && (
+          <g>
+            <line x1={X_EJE} y1={elegido.y} x2={elegido.x} y2={elegido.y}
+                  stroke="#7c3aed" strokeWidth="1.2" strokeDasharray="4 3" opacity="0.85" />
+            <line x1={elegido.x} y1={elegido.y} x2={elegido.x} y2={Y_EJE}
+                  stroke="#7c3aed" strokeWidth="1.2" strokeDasharray="4 3" opacity="0.85" />
+          </g>
+        )}
+
         {puntos.length > 1 && (
           <>
             <path d={trazo} fill="none" stroke="#ffffff" strokeWidth="4.5"
@@ -82,14 +112,47 @@ export default function CurvaCrecimiento({ sexo, fechaNacimiento, medidas }) {
                   strokeLinejoin="round" strokeLinecap="round" />
           </>
         )}
+
         {puntos.map((p, i) => (
-          <g key={i}>
-            <circle cx={p.x} cy={p.y} r="4.6" fill="#ffffff" opacity="0.95" />
-            <circle cx={p.x} cy={p.y} r="3" fill="#7c3aed" />
+          <g key={i} onClick={(e) => { e.stopPropagation(); setSel(sel === i ? null : i) }}
+             style={{ cursor: 'pointer' }}>
+            {/* Área de toque holgada: los puntos impresos son muy pequeños */}
+            <circle cx={p.x} cy={p.y} r="12" fill="transparent" />
+            <circle cx={p.x} cy={p.y} r={sel === i ? 6.4 : 4.6} fill="#ffffff" opacity="0.95" />
+            <circle cx={p.x} cy={p.y} r={sel === i ? 4.2 : 3} fill="#7c3aed" />
+            {sel === i && (
+              <circle cx={p.x} cy={p.y} r="8.5" fill="none" stroke="#7c3aed"
+                      strokeWidth="1.3" opacity="0.7" />
+            )}
           </g>
         ))}
       </svg>
     </div>
+  )
+
+  // Lectura exacta de la toma elegida, en texto grande y no dentro del dibujo
+  const Lectura = () => (
+    elegido ? (
+      <div className="rounded-2xl px-3 py-2.5"
+           style={{ background: 'rgba(124,58,237,0.14)', border: '1px solid rgba(124,58,237,0.32)' }}>
+        <div className="flex items-baseline justify-between gap-2">
+          <span className="text-violet-200 text-base font-bold">{elegido.talla} cm</span>
+          <span className="text-white/50 text-xs">{formatFecha(elegido.fecha)}</span>
+        </div>
+        <p className="text-white/55 text-xs mt-0.5">
+          {edadTexto(fechaNacimiento, elegido.fecha)}
+          {elegido.peso != null && ` · ${elegido.peso} kg`}
+        </p>
+      </div>
+    ) : (
+      <div className="flex items-center gap-2">
+        <span className="inline-block" style={{ width: 14, height: 3, borderRadius: 2, background: '#7c3aed' }} />
+        <span className="text-white/45 text-xs">Tomas del paciente</span>
+        <span className="text-white/25 text-xs ml-auto">
+          {puntos.length} {puntos.length === 1 ? 'toma' : 'tomas'} · toca una para leerla
+        </span>
+      </div>
+    )
   )
 
   return (
@@ -115,17 +178,8 @@ export default function CurvaCrecimiento({ sexo, fechaNacimiento, medidas }) {
           </p>
         ) : (
           <>
-            <button onClick={() => { setZoom(1); setAmpliada(true) }}
-                    className="block w-full" aria-label="Ampliar la curva">
-              <Grafica />
-            </button>
-            <div className="flex items-center gap-2 pt-1">
-              <span className="inline-block" style={{ width: 14, height: 3, borderRadius: 2, background: '#7c3aed' }} />
-              <span className="text-white/45 text-xs">Tomas del paciente</span>
-              <span className="text-white/25 text-xs ml-auto">
-                {puntos.length} {puntos.length === 1 ? 'toma' : 'tomas'} · toca para ampliar
-              </span>
-            </div>
+            <Grafica />
+            <Lectura />
           </>
         )}
 
@@ -166,18 +220,16 @@ export default function CurvaCrecimiento({ sexo, fechaNacimiento, medidas }) {
 
           {/* A 1x la lámina entra completa y va centrada; de ahí en adelante
               se desplaza y el efecto la deja sobre las tomas del paciente. */}
-          <div ref={marco} className="flex-1 overflow-auto px-3 pb-4"
+          <div ref={marco} className="flex-1 overflow-auto px-3"
                style={zoom === 1 ? { display: 'flex', alignItems: 'center' } : undefined}>
             <div style={{ width: `${zoom * 100}%`, flexShrink: 0 }}>
               <Grafica />
             </div>
           </div>
 
-          {zoom > 1 && (
-            <p className="text-white/30 text-[11px] text-center pb-3 flex-shrink-0">
-              Arrastra para moverte por la lámina
-            </p>
-          )}
+          <div className="px-4 py-3 flex-shrink-0">
+            <Lectura />
+          </div>
         </div>
       )}
     </>
