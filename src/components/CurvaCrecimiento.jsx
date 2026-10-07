@@ -40,6 +40,10 @@ export default function CurvaCrecimiento({ sexo, fechaNacimiento, medidas }) {
   const [ampliada, setAmpliada] = useState(false)
   const [zoom, setZoom] = useState(1)
   const [sel, setSel] = useState(null)
+  // Ancho que hace entrar la lámina completa, calculado del espacio real.
+  // Se fija en píxeles en vez de dejarlo a max-height en porcentaje, que no
+  // resuelve contra un contenedor de alto automático y desfasaba los puntos.
+  const [anchoAjuste, setAnchoAjuste] = useState(null)
   const marco = useRef(null)
 
   const lamina = sexo === 'M' ? '/curva-talla-varones.png' : '/curva-talla-hembras.png'
@@ -73,6 +77,22 @@ export default function CurvaCrecimiento({ sexo, fechaNacimiento, medidas }) {
     el.scrollTop = fy * el.scrollHeight - el.clientHeight / 2
   }, [puntos])
 
+  const medirAjuste = useCallback(() => {
+    const el = marco.current
+    if (!el) return
+    const cs = getComputedStyle(el)
+    const ancho = el.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight)
+    const alto = el.clientHeight - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom)
+    setAnchoAjuste(Math.max(0, Math.min(ancho, alto * (IMG_W / IMG_H))))
+  }, [])
+
+  useEffect(() => {
+    if (!ampliada) return
+    medirAjuste()
+    window.addEventListener('resize', medirAjuste)
+    return () => window.removeEventListener('resize', medirAjuste)
+  }, [ampliada, zoom, medirAjuste])
+
   useEffect(() => {
     if (!ampliada) return
     // Si la lámina aún no terminó de medirse, el primer intento se queda
@@ -87,11 +107,18 @@ export default function CurvaCrecimiento({ sexo, fechaNacimiento, medidas }) {
   const trazo = puntos.map((p, i) => `${i ? 'L' : 'M'}${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' ')
   const elegido = sel != null ? puntos[sel] : null
 
-  const Grafica = ({ estilo }) => (
-    <div style={{ position: 'relative', width: '100%', lineHeight: 0, ...estilo }}>
+  // `ajustar` = la lámina entra completa en el espacio disponible. En ese modo
+  // manda la imagen: se escala conservando su proporción y el contenedor se
+  // ajusta a ella. Si se estirara, la capa de puntos (que sí conserva la
+  // proporción) quedaría desplazada respecto al dibujo.
+  const Grafica = ({ ancho = '100%' }) => (
+    <div style={{ position: 'relative', lineHeight: 0, width: ancho, flexShrink: 0 }}>
       <img src={lamina} alt="Curva de distancia para uso clínico, talla"
-           style={{ width: '100%', height: '100%', display: 'block', borderRadius: 8 }} />
-      <svg viewBox={`0 0 ${IMG_W} ${IMG_H}`}
+           style={{ display: 'block', width: '100%', height: 'auto', borderRadius: 8 }} />
+      {/* preserveAspectRatio="none" hace que la capa se deforme exactamente
+          igual que la imagen: así los puntos no pueden quedar corridos
+          respecto al dibujo, pase lo que pase con el tamaño de la caja. */}
+      <svg viewBox={`0 0 ${IMG_W} ${IMG_H}`} preserveAspectRatio="none"
            style={{ position: 'absolute', inset: 0, width: '100%', height: '100%' }}
            onClick={() => setSel(null)}>
 
@@ -228,18 +255,9 @@ export default function CurvaCrecimiento({ sexo, fechaNacimiento, medidas }) {
                style={zoom === 1
                  ? { display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: 0 }
                  : { minHeight: 0 }}>
-            {zoom === 1 ? (
-              // Entra completa: se limita por alto y por ancho, conservando
-              // la proporción de la lámina.
-              <Grafica estilo={{
-                aspectRatio: `${IMG_W} / ${IMG_H}`,
-                maxWidth: '100%', maxHeight: '100%', margin: '0 auto',
-              }} />
-            ) : (
-              <div style={{ width: `${zoom * 100}%`, flexShrink: 0 }}>
-                <Grafica />
-              </div>
-            )}
+            {zoom === 1
+              ? <Grafica ancho={anchoAjuste ? `${anchoAjuste}px` : '100%'} />
+              : <Grafica ancho={`${zoom * 100}%`} />}
           </div>
 
           {/* El padding de abajo respeta la barra de gestos del teléfono:
