@@ -1,7 +1,8 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { createPortal } from 'react-dom'
-import { X, Maximize2 } from 'lucide-react'
-import { calcularEdad, edadTexto } from '../lib/clinico'
+import { X, Maximize2, Printer } from 'lucide-react'
+import { edadTexto } from '../lib/clinico'
+import { IMG_W, IMG_H, X_EJE, Y_EJE, laminaDe, puntosDeLamina, imprimirCurva } from '../lib/lamina'
 
 // ── Curva de Distancia para uso clínico · Talla ──
 // Se usa la lámina oficial de la SVPP (percentiles de Fundacredesa) como
@@ -12,21 +13,8 @@ import { calcularEdad, edadTexto } from '../lib/clinico'
 // Al tocar una toma se dibujan guías hacia los dos ejes, para poder leer
 // el percentil sobre la lámina sin estimar la posición a ojo.
 //
-// Calibración de la lámina, medida sobre la imagen recortada (585 x 564 px)
-// y verificada contra los números impresos de los dos ejes:
-const IMG_W = 585, IMG_H = 564
-const X_EDAD_0 = 45.0        // píxel del año 0
-const PX_POR_ANIO = 24.575
-const Y_TALLA_200 = 38.5     // píxel de los 200 cm
-const PX_POR_CM = 2.7588
-const EDAD_MAX = 20, TALLA_MIN = 30, TALLA_MAX = 200
-
-// Bordes del área graficada, para que las guías lleguen justo a los ejes
-const X_EJE = X_EDAD_0
-const Y_EJE = Y_TALLA_200 + (TALLA_MAX - TALLA_MIN) * PX_POR_CM
-
-const ejeX = (edad) => X_EDAD_0 + edad * PX_POR_ANIO
-const ejeY = (cm) => Y_TALLA_200 + (TALLA_MAX - cm) * PX_POR_CM
+// La calibración y el cálculo de los puntos viven en lib/lamina.js, para
+// que la pantalla y la impresión usen exactamente los mismos números.
 
 const ZOOMS = [1, 2, 3]
 
@@ -36,7 +24,7 @@ function formatFecha(iso) {
   return `${d}/${m}/${y}`
 }
 
-export default function CurvaCrecimiento({ sexo, fechaNacimiento, medidas }) {
+export default function CurvaCrecimiento({ sexo, fechaNacimiento, medidas, paciente, historial, hoy }) {
   const [ampliada, setAmpliada] = useState(false)
   const [zoom, setZoom] = useState(1)
   const [sel, setSel] = useState(null)
@@ -46,25 +34,9 @@ export default function CurvaCrecimiento({ sexo, fechaNacimiento, medidas }) {
   const [anchoAjuste, setAnchoAjuste] = useState(null)
   const marco = useRef(null)
 
-  const lamina = sexo === 'M' ? '/curva-talla-varones.png' : '/curva-talla-hembras.png'
+  const lamina = laminaDe(sexo)
 
-  const puntos = (medidas || [])
-    .filter(m => m.talla)
-    .map(m => {
-      const e = calcularEdad(fechaNacimiento, m.fecha)
-      if (!e) return null
-      const talla = Number(m.talla)
-      // Fuera de la lámina no se dibuja nada: es preferible no mostrar el
-      // punto a mostrarlo en un lugar que no le corresponde.
-      if (e.decimal < 0 || e.decimal > EDAD_MAX) return null
-      if (talla < TALLA_MIN || talla > TALLA_MAX) return null
-      return {
-        x: ejeX(e.decimal), y: ejeY(talla),
-        edad: e.decimal, talla, fecha: m.fecha, peso: m.peso,
-      }
-    })
-    .filter(Boolean)
-    .sort((a, b) => a.edad - b.edad)
+  const puntos = puntosDeLamina(medidas, fechaNacimiento)
 
   // Al acercar, la lámina no cabe en pantalla. Se centra en las tomas del
   // paciente, que es lo que interesa ver, y no en el extremo izquierdo vacío.
@@ -193,11 +165,18 @@ export default function CurvaCrecimiento({ sexo, fechaNacimiento, medidas }) {
               Talla · {sexo === 'M' ? 'Varones' : 'Hembras'}
             </p>
           </div>
-          <button onClick={() => { setZoom(1); setAmpliada(true) }}
-                  className="glass-btn-icon w-9 h-9 flex items-center justify-center flex-shrink-0"
-                  aria-label="Ver la curva en grande">
-            <Maximize2 size={15} className="text-white/70" />
-          </button>
+          <div className="flex items-center gap-2 flex-shrink-0">
+            <button onClick={() => imprimirCurva({ paciente, historial, medidas, fecha: hoy })}
+                    className="glass-btn-icon w-9 h-9 flex items-center justify-center"
+                    aria-label="Imprimir la curva">
+              <Printer size={15} className="text-white/70" />
+            </button>
+            <button onClick={() => { setZoom(1); setAmpliada(true) }}
+                    className="glass-btn-icon w-9 h-9 flex items-center justify-center"
+                    aria-label="Ver la curva en grande">
+              <Maximize2 size={15} className="text-white/70" />
+            </button>
+          </div>
         </div>
 
         {puntos.length === 0 ? (

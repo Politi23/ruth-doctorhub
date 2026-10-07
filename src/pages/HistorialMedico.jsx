@@ -253,7 +253,9 @@ export default function HistorialMedico() {
 
         {/* Curva de distancia para uso clínico · Talla */}
         {NEGOCIO.modulos?.curvaCrecimiento && form.sexo && form.fecha_nacimiento && (
-          <CurvaCrecimiento sexo={form.sexo} fechaNacimiento={form.fecha_nacimiento} medidas={misMedidas} />
+          <CurvaCrecimiento sexo={form.sexo} fechaNacimiento={form.fecha_nacimiento}
+                            medidas={misMedidas} paciente={paciente}
+                            historial={{ ...form }} hoy={hoyVE()} />
         )}
 
         {/* Texto clínico */}
