@@ -242,7 +242,10 @@ export default function CurvaCrecimiento({ sexo, fechaNacimiento, medidas }) {
             )}
           </div>
 
-          <div className="px-4 py-3 flex-shrink-0">
+          {/* El padding de abajo respeta la barra de gestos del teléfono:
+              sin él la lectura queda pegada al borde y el sistema la tapa. */}
+          <div className="px-4 pt-3 flex-shrink-0"
+               style={{ paddingBottom: 'calc(0.75rem + env(safe-area-inset-bottom, 0px))' }}>
             <Lectura />
           </div>
         </div>,
