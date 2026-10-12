@@ -54,9 +54,10 @@ export const NEGOCIO = {
     cm: '6774',
     correo: '',
     sello: '/sello.png',
-    // Su sello es solo texto, sin firma manuscrita: se deja espacio arriba
-    // para que ella firme sobre el papel.
-    espacioFirma: true,
+    // Su firma escaneada, que se estampa sobre el sello. Si se deja vacía,
+    // el documento sale con el sello y un espacio en blanco para firmar.
+    firma: '/firma.png',
+    espacioFirma: false,
   },
 
   // ── Dominio que se imprime en el QR de verificación ──

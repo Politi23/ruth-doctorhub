@@ -38,6 +38,7 @@ export function membrete(med, logo = LOGO_MEMBRETE) {
 // Sin sello configurado deja el espacio para firmar a mano.
 export function pieHoja({ med, consultorio = '', qrSvg = '', codigo = '', base = '', conSello = true }) {
   const sello = conSello && med.sello ? `${window.location.origin}${med.sello}` : ''
+  const firma = conSello && med.firma ? `${window.location.origin}${med.firma}` : ''
   const dominio = String(base).replace(/^https?:\/\//, '')
 
   const validador = codigo ? `
@@ -52,7 +53,9 @@ export function pieHoja({ med, consultorio = '', qrSvg = '', codigo = '', base =
       <div class="pie-fila">
         <div class="pie-firma">
           ${sello
-            ? `${med.espacioFirma ? '<div class="espacio-firma"></div>' : ''}<img class="sello" src="${sello}" alt="">`
+            ? `${firma
+                  ? `<img class="firma-img" src="${firma}" alt="">`
+                  : (med.espacioFirma ? '<div class="espacio-firma"></div>' : '')}<img class="sello" src="${sello}" alt="">`
             : `<div class="espacio-firma"></div><p class="firma">${med.nombre}</p>`}
         </div>
         ${validador}
@@ -80,6 +83,9 @@ export const estilosHoja = `
     .validador .qr svg { width: 100%; height: 100%; display: block; shape-rendering: crispEdges; }
     .val-cod { margin: 1mm 0 0; font-size: 6pt; color: #111; white-space: nowrap; }
     .val-url { margin: 0.5mm 0 0; font-size: 5pt; color: #666; line-height: 1.25; word-break: break-word; }
+    /* La firma se estampa sobre el sello, como se firma en papel: el
+       margen inferior negativo la monta sobre el borde de arriba. */
+    .firma-img { display: block; height: 20mm; width: auto; margin: 0 0 -3mm 2mm; position: relative; }
     .sello { display: block; width: 52mm; height: auto; margin: 0 0 2px; }
     .espacio-firma { height: 16mm; }
     .firma { margin: 0 0 2px; font-size: 8.5pt; font-weight: bold; color: #5b21b6; }
