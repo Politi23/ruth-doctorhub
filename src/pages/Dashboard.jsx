@@ -30,7 +30,7 @@ export default function Dashboard() {
   const mes = mes0 - 1  // 0-based para MESES[]
   const mesStr = hoyStr.slice(0, 7) // "YYYY-MM"
   const anioStr = hoyStr.slice(0, 4)
-  const tasaHoy = bcv?.eur ?? null
+  const tasaHoy = bcv?.usd ?? null
   const hoyDate = new Date(hoyStr + 'T12:00')
 
   const [vistaIngresos, setVistaIngresos] = useState('mes')
@@ -193,7 +193,7 @@ export default function Dashboard() {
                     className="inline-flex items-center gap-1.5 mt-3 px-3 py-1.5 rounded-2xl"
                     style={{background:'rgba(255,255,255,0.08)', border:'1px solid rgba(255,255,255,0.14)'}}>
               <TrendingUp size={11} className="text-violet-300" />
-              <span className="text-violet-300 text-xs font-semibold">BCV €</span>
+              <span className="text-violet-300 text-xs font-semibold">BCV $</span>
               <span className="text-white text-xs font-bold">{parseFloat(tasaHoy.toFixed(4))} Bs</span>
             </button>
           )}
@@ -347,7 +347,7 @@ export default function Dashboard() {
                 {pctIngresos >= 0 ? '↑' : '↓'} {Math.abs(pctIngresos).toFixed(1)}% vs {MESES[mesPasado]}
               </p>
             )}
-            <p className="text-white/30 text-xs mt-1">USD + Bs a tasa EUR del día de cada pago</p>
+            <p className="text-white/30 text-xs mt-1">USD + Bs a tasa BCV del día de cada pago</p>
           </div>
           {egresosMes.length > 0 && (() => {
             const balance = totalMesUsd - totalEgresosEnUsd

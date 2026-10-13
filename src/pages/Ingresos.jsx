@@ -13,7 +13,7 @@ const MESES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto'
 function exportarPDF(filtrados, mes, anio, totalUSD, totalBs, totalEnUsd, tasaHoy) {
   const filas = filtrados.map(i => {
     const t = Number(i.tasa_bcv)
-    const usdEq = i.moneda === 'Bs' && t ? `≈€${(Number(i.monto)/t).toFixed(2)}` : ''
+    const usdEq = i.moneda === 'Bs' && t ? `≈$${(Number(i.monto)/t).toFixed(2)}` : ''
     return `
       <tr>
         <td>${i.fecha ? i.fecha.split('-').reverse().join('/') : ''}</td>
@@ -77,7 +77,7 @@ function exportarPDFAnual(ingresosAnio, anio, tasaHoy) {
 
     const filas = del_mes.sort((a, b) => a.fecha.localeCompare(b.fecha)).map(i => {
       const tRow = Number(i.tasa_bcv) || tasaHoy
-      const eq = i.moneda === 'Bs' && tRow ? `≈€${(Number(i.monto)/tRow).toFixed(2)}` : ''
+      const eq = i.moneda === 'Bs' && tRow ? `≈$${(Number(i.monto)/tRow).toFixed(2)}` : ''
       return `<tr><td>${i.fecha.split('-').reverse().join('/')}</td><td>${i.paciente_nombre}</td><td>${i.concepto}</td><td>${i.metodo_pago}</td><td style="text-align:right;font-weight:600">${i.moneda==='USD'?'$':'Bs.'}${Number(i.monto).toFixed(2)}</td><td style="text-align:right;color:#6b7280">${eq}</td></tr>`
     }).join('')
 
@@ -117,7 +117,7 @@ function formatFecha(isoStr) {
 export default function Ingresos() {
   const { ingresos, eliminarIngreso } = useApp()
   const { data: bcv } = useBcv()
-  const tasaHoy = bcv?.eur ?? null
+  const tasaHoy = bcv?.usd ?? null
   const navigate = useNavigate()
   const hoyStr = hoyVE()
   const [mes, setMes] = useState(() => parseInt(hoyStr.split('-')[1]) - 1)
@@ -145,21 +145,21 @@ export default function Ingresos() {
   const filtradosMes = ingresosMes.filter(porMoneda).sort((a, b) => new Date(b.fecha) - new Date(a.fecha))
   const totalUSD = ingresosMes.filter(i => i.moneda === 'USD').reduce((a, i) => a + Number(i.monto), 0)
   const totalBs  = ingresosMes.filter(i => i.moneda === 'Bs').reduce((a, i) => a + Number(i.monto), 0)
-  // Total combinado: USD directos + Bs a tasa EUR del día del pago (fallback a tasa de hoy)
-  const bsEnEur = ingresosMes.filter(i => i.moneda === 'Bs').reduce((a, i) => {
+  // Total combinado: USD directos + Bs a tasa BCV del día del pago (fallback a tasa de hoy)
+  const bsEnUsd = ingresosMes.filter(i => i.moneda === 'Bs').reduce((a, i) => {
     const t = Number(i.tasa_bcv)
     return t ? a + Number(i.monto) / t : a
   }, 0)
-  const totalEnUsd = totalUSD + bsEnEur
+  const totalEnUsd = totalUSD + bsEnUsd
 
   // Totales año
   const totalUSDanio = ingresosAnio.filter(i => i.moneda === 'USD').reduce((a, i) => a + Number(i.monto), 0)
   const totalBsanio  = ingresosAnio.filter(i => i.moneda === 'Bs').reduce((a, i) => a + Number(i.monto), 0)
-  const bsEnEurAnio  = ingresosAnio.filter(i => i.moneda === 'Bs').reduce((a, i) => {
+  const bsEnUsdAnio  = ingresosAnio.filter(i => i.moneda === 'Bs').reduce((a, i) => {
     const t = Number(i.tasa_bcv)
     return t ? a + Number(i.monto) / t : a
   }, 0)
-  const totalEnUsdAnio = totalUSDanio + bsEnEurAnio
+  const totalEnUsdAnio = totalUSDanio + bsEnUsdAnio
 
   // Resumen por método de pago del mes
   const METODOS_USD = ['Efectivo USD', 'Zelle', 'PayPal']
@@ -285,7 +285,7 @@ export default function Ingresos() {
               ) : (
                 <p className="text-white/30 text-xs mt-1">Sin datos de {etiquetaPrevia} para comparar</p>
               )}
-              <p className="text-white/30 text-xs mt-1">USD directo + Bs a tasa EUR del día de cada pago</p>
+              <p className="text-white/30 text-xs mt-1">USD directo + Bs a tasa BCV del día de cada pago</p>
             </div>
           </div>
           <div className="grid grid-cols-2 gap-2">
@@ -446,7 +446,7 @@ export default function Ingresos() {
                   <p className="text-white font-semibold truncate">{i.paciente_nombre}</p>
                   <p className="text-white/55 text-sm truncate">{i.concepto}</p>
                   <p className="text-white/30 text-xs">{formatFecha(i.fecha)} · {i.metodo_pago}</p>
-                  {i.moneda === 'Bs' && (() => { const t = Number(i.tasa_bcv); return t ? <p className="text-violet-300/50 text-xs">Tasa EUR: {parseFloat(t.toFixed(4))} · ≈€{(Number(i.monto)/t).toFixed(2)}</p> : null })()}
+                  {i.moneda === 'Bs' && (() => { const t = Number(i.tasa_bcv); return t ? <p className="text-violet-300/50 text-xs">Tasa BCV: {parseFloat(t.toFixed(4))} · ≈${(Number(i.monto)/t).toFixed(2)}</p> : null })()}
                   {i.notas ? <p className="text-white/40 text-xs truncate">{i.notas}</p> : null}
                 </div>
                 <div className="text-right flex-shrink-0 space-y-1">

@@ -11,7 +11,7 @@ const DIAS   = ['Dom','Lun','Mar','Mié','Jue','Vie','Sáb']
 export default function Estadisticas() {
   const { pacientes, ingresos, citas } = useApp()
   const { data: bcv } = useBcv()
-  const tasaHoy = bcv?.eur ?? null
+  const tasaHoy = bcv?.usd ?? null
 
   const hoyStr = hoyVE()
   const [anioActualNum, mesActualNum] = hoyStr.split('-').map(Number)

@@ -129,7 +129,7 @@ export default function NuevoIngreso() {
     ? pacientes.filter(p => { const q = busqueda.toLowerCase(); return p.nombre.toLowerCase().includes(q) || p.apellido.toLowerCase().includes(q) || (p.cedula||'').includes(q) }).slice(0, 8)
     : recientes
 
-  const tasaEur = bcv?.eur ?? null
+  const tasaUsd = bcv?.usd ?? null
   const monto1 = Number(form.monto)
   const monto2 = Number(pago2.monto)
   const esBs = form.moneda === 'Bs'
@@ -140,14 +140,14 @@ export default function NuevoIngreso() {
   const soloUsd2 = METODOS_USD.includes(pago2.metodo)
   const mostrarConvBs = !esBs && metodoBs && monto1 > 0
   const mostrarConvBs2 = pago2Activo && !esBs2 && metodoBs2 && monto2 > 0
-  const montoBsAuto = tasaEur ? (monto1 * tasaEur).toFixed(2) : null
-  const montoBs2Auto = tasaEur ? (monto2 * tasaEur).toFixed(2) : null
+  const montoBsAuto = tasaUsd ? (monto1 * tasaUsd).toFixed(2) : null
+  const montoBs2Auto = tasaUsd ? (monto2 * tasaUsd).toFixed(2) : null
   const montoBsMostrar = bsPersonalizado ? montoBsCustom : montoBsAuto
   const montoBs2Mostrar = bs2Personalizado ? montoBs2Custom : montoBs2Auto
-  const montoEur = esBs && tasaEur && monto1 > 0 ? (monto1 / tasaEur).toFixed(2) : null
+  const montoUsd = esBs && tasaUsd && monto1 > 0 ? (monto1 / tasaUsd).toFixed(2) : null
 
-  const monto1EnUSD = esBs && tasaEur ? monto1 / tasaEur : monto1
-  const monto2EnUSD = pago2Activo && esBs2 && tasaEur ? monto2 / tasaEur : monto2
+  const monto1EnUSD = esBs && tasaUsd ? monto1 / tasaUsd : monto1
+  const monto2EnUSD = pago2Activo && esBs2 && tasaUsd ? monto2 / tasaUsd : monto2
   const totalUSD = pago2Activo ? (monto1EnUSD + monto2EnUSD).toFixed(2) : null
 
   const toggleConcepto = (c) => {
@@ -176,14 +176,14 @@ export default function NuevoIngreso() {
     // se registra convertido a Bs; los métodos en divisas quedan en USD.
     const construirLinea = (metodo, montoNum, monedaSel, bsPers, bsCustom) => {
       const esMetodoBs = METODOS_BS.includes(metodo)
-      if (esMetodoBs && monedaSel === 'USD' && tasaEur) {
+      if (esMetodoBs && monedaSel === 'USD' && tasaUsd) {
         return {
-          monto: bsPers && Number(bsCustom) > 0 ? Number(bsCustom) : montoNum * tasaEur,
-          moneda: 'Bs', metodo_pago: metodo, tasa_bcv: tasaEur,
+          monto: bsPers && Number(bsCustom) > 0 ? Number(bsCustom) : montoNum * tasaUsd,
+          moneda: 'Bs', metodo_pago: metodo, tasa_bcv: tasaUsd,
         }
       }
       if (monedaSel === 'Bs') {
-        return { monto: montoNum, moneda: 'Bs', metodo_pago: metodo, tasa_bcv: tasaEur || null }
+        return { monto: montoNum, moneda: 'Bs', metodo_pago: metodo, tasa_bcv: tasaUsd || null }
       }
       return { monto: montoNum, moneda: 'USD', metodo_pago: metodo, tasa_bcv: null }
     }
@@ -357,10 +357,10 @@ export default function NuevoIngreso() {
                   />
                 ) : (
                   <div className="flex items-end justify-between">
-                    {tasaEur ? (
+                    {tasaUsd ? (
                       <>
                         <p className="text-violet-200 text-sm font-bold">Bs {montoBsAuto}</p>
-                        <p className="text-white/35 text-xs">Tasa EUR: {parseFloat(tasaEur.toFixed(4))}</p>
+                        <p className="text-white/35 text-xs">Tasa BCV: {parseFloat(tasaUsd.toFixed(4))}</p>
                       </>
                     ) : (
                       <p className="text-white/40 text-xs">Sin tasa disponible</p>
@@ -373,12 +373,12 @@ export default function NuevoIngreso() {
             {esBs && monto1 > 0 && !pago2Activo && (
               <div className="mt-2 rounded-2xl px-3 py-2.5 flex items-center justify-between"
                    style={{background:'rgba(52,211,153,0.10)', border:'1px solid rgba(52,211,153,0.20)'}}>
-                <span className="text-emerald-300/70 text-xs">Equivalente EUR</span>
+                <span className="text-emerald-300/70 text-xs">Equivalente USD</span>
                 <div className="text-right">
-                  {tasaEur ? (
+                  {tasaUsd ? (
                     <>
-                      <p className="text-emerald-300 text-sm font-bold">€{montoEur}</p>
-                      <p className="text-white/35 text-xs">Tasa BCV: Bs {parseFloat(tasaEur.toFixed(4))}</p>
+                      <p className="text-emerald-300 text-sm font-bold">${montoUsd}</p>
+                      <p className="text-white/35 text-xs">Tasa BCV: Bs {parseFloat(tasaUsd.toFixed(4))}</p>
                     </>
                   ) : (
                     <p className="text-white/40 text-xs">Sin tasa disponible</p>
@@ -449,10 +449,10 @@ export default function NuevoIngreso() {
                       />
                     ) : (
                       <div className="flex items-end justify-between">
-                        {tasaEur ? (
+                        {tasaUsd ? (
                           <>
                             <p className="text-violet-200 text-sm font-bold">Bs {montoBs2Auto}</p>
-                            <p className="text-white/35 text-xs">Tasa EUR: {parseFloat(tasaEur.toFixed(4))}</p>
+                            <p className="text-white/35 text-xs">Tasa BCV: {parseFloat(tasaUsd.toFixed(4))}</p>
                           </>
                         ) : (
                           <p className="text-white/40 text-xs">Sin tasa disponible</p>
