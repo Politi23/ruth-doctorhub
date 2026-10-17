@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useApp } from '../context/AppContext'
 import { useToast } from '../context/ToastContext'
@@ -6,6 +6,7 @@ import { Save, Printer, Trash2, X, FileText } from 'lucide-react'
 import PageHeader from '../components/PageHeader'
 import { NEGOCIO } from '../config/negocio'
 import { hoyVE } from '../lib/fecha'
+import { leerBorrador, guardarBorrador, borrarBorrador } from '../lib/borrador'
 import { edadTexto } from '../lib/clinico'
 import { LOGO_MEMBRETE, membrete, estilosHoja, pieHoja } from '../lib/membrete'
 
@@ -143,6 +144,27 @@ export default function InformeMedico() {
   const [guardando, setGuardando] = useState(false)
   const [confirmar, setConfirmar] = useState(null)
   const [form, setForm] = useState(null)
+  const [recuperado, setRecuperado] = useState(false)
+
+  // Si el teléfono descartó la app a mitad del documento, se recupera lo
+  // que estaba escrito en vez de empezar de cero.
+  const claveBorrador = `informe:${id}`
+
+  useEffect(() => {
+    const guardado = leerBorrador(claveBorrador)
+    if (guardado) { setForm(guardado); setCreando(true); setRecuperado(true) }
+  }, [claveBorrador])
+
+  useEffect(() => {
+    if (creando && form) guardarBorrador(claveBorrador, form)
+  }, [creando, form, claveBorrador])
+
+  const cerrarFormulario = () => {
+    borrarBorrador(claveBorrador)
+    setRecuperado(false)
+    setCreando(false)
+    setForm(null)
+  }
 
   if (!paciente) {
     return (
@@ -189,8 +211,7 @@ export default function InformeMedico() {
         plan_trabajo: form.plan_trabajo || null,
       })
       toast('Informe guardado', 'success')
-      setCreando(false)
-      setForm(null)
+      cerrarFormulario()
     } catch {
       toast('No se pudo guardar el informe', 'error')
     }
@@ -246,11 +267,26 @@ export default function InformeMedico() {
         {creando && form && (
           <div className="glass-card space-y-4">
             <div className="flex items-center justify-between">
-              <p className="text-white font-semibold text-sm">Nuevo informe</p>
-              <button onClick={() => { setCreando(false); setForm(null) }} className="text-white/40">
+              <p className="text-white font-semibold text-sm">
+                {recuperado ? 'Informe sin terminar' : 'Nuevo informe'}
+              </p>
+              <button onClick={cerrarFormulario} className="text-white/40">
                 <X size={18} />
               </button>
             </div>
+
+            {recuperado && (
+              <div className="rounded-2xl px-3 py-2.5 flex items-center gap-3"
+                   style={{ background: 'rgba(251,191,36,0.12)', border: '1px solid rgba(251,191,36,0.30)' }}>
+                <p className="text-amber-200/90 text-xs flex-1 leading-relaxed">
+                  Se recuperó lo que estabas escribiendo.
+                </p>
+                <button onClick={cerrarFormulario}
+                        className="text-amber-200/80 text-xs font-semibold underline flex-shrink-0">
+                  Descartar
+                </button>
+              </div>
+            )}
 
             <div>
               <label className="glass-label">Fecha</label>

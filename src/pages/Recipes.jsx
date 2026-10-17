@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useApp } from '../context/AppContext'
 import { useToast } from '../context/ToastContext'
@@ -6,6 +6,7 @@ import { Save, Printer, Trash2, Plus, X, Pill } from 'lucide-react'
 import PageHeader from '../components/PageHeader'
 import { NEGOCIO, TERM } from '../config/negocio'
 import { hoyVE } from '../lib/fecha'
+import { leerBorrador, guardarBorrador, borrarBorrador } from '../lib/borrador'
 import QRCode from 'qrcode'
 import { membrete, estilosHoja, pieHoja } from '../lib/membrete'
 
@@ -145,6 +146,26 @@ export default function Recipes() {
     medicamentos: [{ ...MEDICAMENTO_VACIO }],
     indicaciones_generales: '',
   })
+  const [recuperado, setRecuperado] = useState(false)
+
+  // Si el teléfono descartó la app a mitad del documento, se recupera lo
+  // que estaba escrito en vez de empezar de cero.
+  const claveBorrador = `recipe:${id}`
+
+  useEffect(() => {
+    const guardado = leerBorrador(claveBorrador)
+    if (guardado) { setForm(guardado); setCreando(true); setRecuperado(true) }
+  }, [claveBorrador])
+
+  useEffect(() => {
+    if (creando) guardarBorrador(claveBorrador, form)
+  }, [creando, form, claveBorrador])
+
+  const cerrarFormulario = () => {
+    borrarBorrador(claveBorrador)
+    setRecuperado(false)
+    setCreando(false)
+  }
 
   if (!paciente) {
     return (
@@ -196,7 +217,7 @@ export default function Recipes() {
         indicaciones_generales: form.indicaciones_generales.trim(),
       })
       toast('Récipe guardado', 'success')
-      setCreando(false)
+      cerrarFormulario()
     } catch (e) {
       toast(e.message || 'Error al guardar', 'error')
     } finally {
@@ -213,7 +234,7 @@ export default function Recipes() {
               <Plus size={19} className="text-white" />
             </button>
           ) : (
-            <button onClick={() => setCreando(false)} className="glass-btn-icon w-10 h-10 flex items-center justify-center">
+            <button onClick={cerrarFormulario} className="glass-btn-icon w-10 h-10 flex items-center justify-center">
               <X size={18} className="text-white/70" />
             </button>
           )
@@ -239,7 +260,22 @@ export default function Recipes() {
         {/* Nuevo récipe */}
         {creando && (
           <div className="glass-card space-y-4">
-            <p className="text-white font-semibold text-sm">Nuevo récipe</p>
+            <p className="text-white font-semibold text-sm">
+              {recuperado ? 'Récipe sin terminar' : 'Nuevo récipe'}
+            </p>
+
+            {recuperado && (
+              <div className="rounded-2xl px-3 py-2.5 flex items-center gap-3"
+                   style={{ background: 'rgba(251,191,36,0.12)', border: '1px solid rgba(251,191,36,0.30)' }}>
+                <p className="text-amber-200/90 text-xs flex-1 leading-relaxed">
+                  Se recuperó lo que estabas escribiendo.
+                </p>
+                <button onClick={cerrarFormulario}
+                        className="text-amber-200/80 text-xs font-semibold underline flex-shrink-0">
+                  Descartar
+                </button>
+              </div>
+            )}
 
             <div>
               <label className="glass-label">Fecha</label>

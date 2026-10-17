@@ -7,6 +7,7 @@ import PageHeader from '../components/PageHeader'
 import CurvaCrecimiento from '../components/CurvaCrecimiento'
 import { NEGOCIO } from '../config/negocio'
 import { hoyVE } from '../lib/fecha'
+import { leerBorrador, guardarBorrador, borrarBorrador } from '../lib/borrador'
 import { edadTexto, potencialGenetico } from '../lib/clinico'
 
 const VACIO = {
@@ -27,7 +28,7 @@ export default function HistorialMedico() {
   const { id } = useParams()
   const navigate = useNavigate()
   const toast = useToast()
-  const { pacientes, historiales, medidas, guardarHistorial, agregarMedida, eliminarMedida } = useApp()
+  const { pacientes, historiales, medidas, guardarHistorial, agregarMedida, eliminarMedida, loading } = useApp()
 
   const paciente = pacientes.find(p => p.id === id)
   const historial = (historiales || []).find(h => h.paciente_id === id)
@@ -39,10 +40,59 @@ export default function HistorialMedico() {
   const [guardando, setGuardando] = useState(false)
   const [nueva, setNueva] = useState({ fecha: hoyVE(), peso: '', talla: '' })
   const [borrar, setBorrar] = useState(null)
+  const [recuperado, setRecuperado] = useState(false)
+  const [listo, setListo] = useState(false)
+
+  // Si el teléfono descartó la app con cambios sin guardar, se recuperan.
+  // Solo se guarda borrador cuando el formulario difiere de lo que está en
+  // la base: así el aviso aparece únicamente si de verdad quedó algo a medias.
+  const claveBorrador = `historial:${id}`
+  const guardadoEnBase = JSON.stringify({ ...VACIO, ...(historial || {}) })
 
   useEffect(() => {
-    if (historial) setForm({ ...VACIO, ...historial })
-  }, [historial])
+    const pendiente = leerBorrador(claveBorrador)
+    if (pendiente) { setForm(pendiente); setRecuperado(true) }
+  }, [claveBorrador])
+
+  // Lo guardado en la base tarda un momento en llegar. Si en ese rato ella ya
+  // escribió algo (o se recuperó un borrador), lo escrito manda y la base solo
+  // completa los campos que quedaron vacíos: así no se pierde ni lo uno ni lo otro.
+  useEffect(() => {
+    if (listo) return
+    if (historial) {
+      setForm(prev => {
+        const mezcla = { ...VACIO, ...historial }
+        // Lo que ella alcanzó a escribir, o lo que se recuperó del borrador,
+        // manda sobre lo que trae la base; la base rellena lo que esté vacío.
+        for (const [campo, valor] of Object.entries(prev)) {
+          if (valor !== '' && valor != null) mezcla[campo] = valor
+        }
+        return mezcla
+      })
+      setListo(true)
+    } else if (!loading) {
+      // Este paciente todavía no tiene historial: se empieza en blanco.
+      setListo(true)
+    }
+  }, [historial, loading, listo])
+
+  // Importante: no se guarda borrador hasta que lo de la base esté en pantalla.
+  // De lo contrario se guardaría el formulario vacío de los primeros instantes
+  // y al volver a entrar ese vacío taparía el historial ya guardado.
+  useEffect(() => {
+    if (!listo) return
+    if (JSON.stringify(form) === guardadoEnBase) {
+      // Lo que hay en pantalla es igual a lo guardado: no queda nada pendiente.
+      borrarBorrador(claveBorrador)
+      setRecuperado(false)
+    } else guardarBorrador(claveBorrador, form)
+  }, [listo, form, guardadoEnBase, claveBorrador])
+
+  const descartarCambios = () => {
+    borrarBorrador(claveBorrador)
+    setRecuperado(false)
+    setForm({ ...VACIO, ...(historial || {}) })
+  }
 
   if (!paciente) {
     return (
@@ -80,6 +130,8 @@ export default function HistorialMedico() {
         examenes_laboratorio: form.examenes_laboratorio || null,
         tratamiento: form.tratamiento || null,
       })
+      borrarBorrador(claveBorrador)
+      setRecuperado(false)
       toast('Historial guardado', 'success')
     } catch {
       toast('No se pudo guardar el historial', 'error')
@@ -130,6 +182,19 @@ export default function HistorialMedico() {
               .filter(Boolean).join(' · ')}
           </p>
         </div>
+
+        {recuperado && (
+          <div className="rounded-2xl px-3 py-2.5 flex items-center gap-3"
+               style={{ background: 'rgba(251,191,36,0.12)', border: '1px solid rgba(251,191,36,0.30)' }}>
+            <p className="text-amber-200/90 text-xs flex-1 leading-relaxed">
+              Se recuperaron cambios sin guardar.
+            </p>
+            <button onClick={descartarCambios}
+                    className="text-amber-200/80 text-xs font-semibold underline flex-shrink-0">
+              Descartar
+            </button>
+          </div>
+        )}
 
         {/* Datos del paciente */}
         <div className="glass-card space-y-4">
